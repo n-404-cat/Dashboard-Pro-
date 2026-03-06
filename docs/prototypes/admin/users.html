@@ -1,23 +1,81 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户管理 - 数据大屏管理系统</title>
     <link rel="stylesheet" href="common.css">
     <style>
-        .user-table { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
-        .user-cell { display: flex; align-items: center; gap: 12px; }
-        .user-cell-avatar { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: white; }
-        .user-cell-info { display: flex; flex-direction: column; }
-        .user-cell-name { font-weight: 500; color: var(--text-dark); }
-        .user-cell-email { font-size: 12px; color: var(--text-muted); }
-        .role-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-        .role-badge.admin { background: rgba(220,53,69,0.1); color: var(--danger); }
-        .role-badge.editor { background: rgba(74,144,217,0.1); color: var(--primary-lighter); }
-        .role-badge.viewer { background: rgba(40,167,69,0.1); color: var(--success); }
+        .user-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-cell-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .user-cell-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-cell-name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .user-cell-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .role-badge.admin {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+        }
+
+        .role-badge.editor {
+            background: rgba(74, 144, 217, 0.1);
+            color: var(--primary-lighter);
+        }
+
+        .role-badge.viewer {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success);
+        }
+
+        .table-btn.password {
+            color: var(--info);
+        }
     </style>
 </head>
+
 <body>
     <script src="layout.js"></script>
 
@@ -25,28 +83,30 @@
         <div class="page-header">
             <div class="page-title-group">
                 <h1 class="page-title">用户管理</h1>
-                <div class="breadcrumb"><a href="dashboard.html">首页</a><span>/</span><span>系统设置</span><span>/</span><span>用户管理</span></div>
+                <div class="breadcrumb"><a
+                        href="dashboard.html">首页</a><span>/</span><span>系统设置</span><span>/</span><span>用户管理</span></div>
             </div>
-            <button class="btn btn-primary" onclick="openModal('addUserModal')"><span>➕</span> 新增用户</button>
+            <button class="btn btn-primary" onclick="openModal('addUserModal')" data-perm="users:create"><span>➕</span>
+                新增用户</button>
         </div>
-        
+
         <div class="filter-bar">
-            <select class="filter-select" id="roleFilter" onchange="filterUsers()">
+            <select class="filter-select" id="roleFilter" onchange="fetchUsers()">
                 <option value="">全部角色</option>
                 <option value="admin">管理员</option>
                 <option value="editor">编辑者</option>
                 <option value="viewer">查看者</option>
             </select>
-            <select class="filter-select" id="statusFilter" onchange="filterUsers()">
+            <select class="filter-select" id="statusFilter" onchange="fetchUsers()">
                 <option value="">全部状态</option>
-                <option value="active">激活</option>
-                <option value="inactive">未激活</option>
-                <option value="locked">已锁定</option>
+                <option value="1">激活</option>
+                <option value="0">禁用</option>
             </select>
-            <input type="text" class="filter-input" placeholder="搜索用户名/邮箱..." id="searchInput" oninput="filterUsers()">
+            <input type="text" class="filter-input" placeholder="搜索用户名/邮箱..." id="searchInput"
+                oninput="debounceFetch()">
             <button class="btn btn-secondary" onclick="resetFilter()">重置</button>
         </div>
-        
+
         <div class="user-table">
             <table class="table">
                 <thead>
@@ -60,127 +120,16 @@
                     </tr>
                 </thead>
                 <tbody id="userTableBody">
-                    <tr data-role="admin" data-status="active">
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-cell-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">A</div>
-                                <div class="user-cell-info">
-                                    <span class="user-cell-name">Admin User</span>
-                                    <span class="user-cell-email">admin@example.com</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="role-badge admin">管理员</span></td>
-                        <td>技术部</td>
-                        <td>2024-01-15 14:30</td>
-                        <td><span class="status-badge active"><span class="status-dot"></span>激活</span></td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role="editor" data-status="active">
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-cell-avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">Z</div>
-                                <div class="user-cell-info">
-                                    <span class="user-cell-name">张小红</span>
-                                    <span class="user-cell-email">zhangxiaohong@example.com</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="role-badge editor">编辑者</span></td>
-                        <td>运营部</td>
-                        <td>2024-01-15 10:20</td>
-                        <td><span class="status-badge active"><span class="status-dot"></span>激活</span></td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role="viewer" data-status="inactive">
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-cell-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">L</div>
-                                <div class="user-cell-info">
-                                    <span class="user-cell-name">李明</span>
-                                    <span class="user-cell-email">liming@example.com</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="role-badge viewer">查看者</span></td>
-                        <td>市场部</td>
-                        <td>2024-01-10 09:15</td>
-                        <td><span class="status-badge inactive"><span class="status-dot"></span>未激活</span></td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role="editor" data-status="locked">
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-cell-avatar" style="background: linear-gradient(135deg, #fa709a, #fee140);">W</div>
-                                <div class="user-cell-info">
-                                    <span class="user-cell-name">王建国</span>
-                                    <span class="user-cell-email">wangjianguo@example.com</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="role-badge editor">编辑者</span></td>
-                        <td>销售部</td>
-                        <td>2024-01-05 16:45</td>
-                        <td><span class="status-badge locked"><span class="status-dot"></span>已锁定</span></td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role="viewer" data-status="active">
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-cell-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">Z</div>
-                                <div class="user-cell-info">
-                                    <span class="user-cell-name">赵敏</span>
-                                    <span class="user-cell-email">zhaomin@example.com</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td><span class="role-badge viewer">查看者</span></td>
-                        <td>财务部</td>
-                        <td>2024-01-14 11:30</td>
-                        <td><span class="status-badge active"><span class="status-dot"></span>激活</span></td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
+                    <!-- 数据将通过 API 加载 -->
                 </tbody>
             </table>
-            
-            <div class="pagination">
-                <span class="pagination-info">共 128 条记录，第 1/13 页</span>
-                <div class="pagination-btns">
-                    <button class="page-btn" disabled>上一页</button>
-                    <button class="page-btn active">1</button>
-                    <button class="page-btn">2</button>
-                    <button class="page-btn">3</button>
-                    <button class="page-btn">下一页</button>
-                </div>
+
+            <div class="pagination" id="paginationContainer">
+                <!-- 分页信息将动态渲染 -->
             </div>
         </div>
     </main>
-    
+
     <!-- 新增用户模态框 -->
     <div class="modal-overlay" id="addUserModal">
         <div class="modal">
@@ -194,7 +143,7 @@
                     <input type="text" class="form-input" id="newUsername" placeholder="请输入用户名">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">邮箱 *</label>
+                    <label class="form-label">邮箱</label>
                     <input type="email" class="form-input" id="newEmail" placeholder="请输入邮箱">
                 </div>
                 <div class="form-group">
@@ -221,7 +170,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 编辑用户模态框 -->
     <div class="modal-overlay" id="editUserModal">
         <div class="modal">
@@ -230,32 +179,35 @@
                 <button class="modal-close" onclick="closeModal('editUserModal')">×</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="editUserId">
                 <div class="form-group">
                     <label class="form-label">用户名</label>
-                    <input type="text" class="form-input" id="editUsername" readonly style="background: var(--bg-light);">
+                    <input type="text" class="form-input" id="editUsername" readonly
+                        style="background: var(--bg-light);">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">昵称</label>
+                    <input type="text" class="form-input" id="editNickname">
                 </div>
                 <div class="form-group">
                     <label class="form-label">邮箱</label>
                     <input type="email" class="form-input" id="editEmail">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">角色</label>
-                    <select class="form-select" id="editRole">
-                        <option value="admin">管理员</option>
-                        <option value="editor">编辑者</option>
-                        <option value="viewer">查看者</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">部门</label>
-                    <input type="text" class="form-input" id="editDepartment">
+                    <label class="form-label">手机号</label>
+                    <input type="text" class="form-input" id="editPhone">
                 </div>
                 <div class="form-group">
                     <label class="form-label">状态</label>
                     <select class="form-select" id="editStatus">
-                        <option value="active">激活</option>
-                        <option value="inactive">未激活</option>
-                        <option value="locked">锁定</option>
+                        <option value="1">激活</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">角色</label>
+                    <select class="form-select" id="editRole">
+                        <option value="">选择角色</option>
                     </select>
                 </div>
             </div>
@@ -265,169 +217,289 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- 修改密码模块框 -->
+    <div class="modal-overlay" id="changePasswordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">修改密码</h3>
+                <button class="modal-close" onclick="closeModal('changePasswordModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pwUserId">
+                <div class="form-group">
+                    <label class="form-label">新密码 *</label>
+                    <input type="password" class="form-input" id="newPasswordInput" placeholder="请输入新密码">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">确认密码 *</label>
+                    <input type="password" class="form-input" id="confirmPasswordInput" placeholder="请再次输入新密码">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('changePasswordModal')">取消</button>
+                <button class="btn btn-primary" onclick="submitPasswordChange()">提交修改</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast-container" id="toastContainer"></div>
-    
+
     <script>
-        function toggleDropdown(menuId) {
-            const menu = document.getElementById(menuId);
-            menu.classList.toggle('show');
-            event.stopPropagation();
-        }
-        
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
-        });
-        
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('show');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-        
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('show');
-            });
-        });
-        
-        let editingRow = null;
-        
-        function editUser(btn) {
-            const row = btn.closest('tr');
-            const cells = row.querySelectorAll('td');
-            
-            editingRow = row;
-            document.getElementById('editUsername').value = cells[0].querySelector('.user-cell-name').textContent;
-            document.getElementById('editEmail').value = cells[0].querySelector('.user-cell-email').textContent;
-            document.getElementById('editRole').value = row.dataset.role;
-            document.getElementById('editDepartment').value = cells[2].textContent;
-            document.getElementById('editStatus').value = row.dataset.status;
-            
-            openModal('editUserModal');
-        }
-        
-        function saveUser() {
-            if (editingRow) {
-                const cells = editingRow.querySelectorAll('td');
-                cells[0].querySelector('.user-cell-name').textContent = document.getElementById('editUsername').value;
-                cells[0].querySelector('.user-cell-email').textContent = document.getElementById('editEmail').value;
-                editingRow.dataset.role = document.getElementById('editRole').value;
-                editingRow.dataset.status = document.getElementById('editStatus').value;
-                cells[2].textContent = document.getElementById('editDepartment').value;
-                
-                const roleMap = { admin: '管理员', editor: '编辑者', viewer: '查看者' };
-                const statusMap = { active: '激活', inactive: '未激活', locked: '已锁定' };
-                cells[1].innerHTML = `<span class="role-badge ${editingRow.dataset.role}">${roleMap[editingRow.dataset.role]}</span>`;
-                cells[4].innerHTML = `<span class="status-badge ${editingRow.dataset.status}"><span class="status-dot"></span>${statusMap[editingRow.dataset.status]}</span>`;
-                
-                closeModal('editUserModal');
-                showToast('用户信息已更新');
+        const API_BASE = '/system/users';
+        let users = [];
+        let allRoles = [];
+        let currentPage = 1;
+        let debounceTimer;
+
+        async function fetchRoles() {
+            try {
+                const response = await fetch('/system/roles');
+                allRoles = await response.json();
+
+                const populateSelect = (id) => {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        select.innerHTML = '<option value="">选择角色</option>' +
+                            allRoles.map(role => `<option value="${role.id}">${role.roleName}</option>`).join('');
+                    }
+                };
+                populateSelect('newRole');
+                populateSelect('editRole');
+            } catch (error) {
+                console.error('Fetch roles error:', error);
             }
         }
-        
-        function deleteUser(btn) {
-            if (confirm('确定要删除该用户吗？此操作不可恢复。')) {
-                const row = btn.closest('tr');
-                row.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => {
-                    row.remove();
-                    showToast('用户已删除');
-                }, 300);
+
+        async function fetchUsers(page = 1) {
+            currentPage = page;
+            const role = document.getElementById('roleFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const username = document.getElementById('searchInput').value;
+
+            let url = `${API_BASE}?page=${page}&pageSize=10`;
+            if (role) url += `&role=${role}`;
+            if (status) url += `&status=${status}`;
+            if (username) url += `&username=${username}`;
+
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+                users = result.list || [];
+                renderUsers(users);
+                window.adminLayout.renderPagination('paginationContainer', result.pagination || { total: users.length, page: 1, pageSize: 10, totalPages: 1 }, fetchUsers);
+            } catch (err) {
+                console.error('Failed to fetch users', err);
+                showToast('加载用户列表失败', 'danger');
             }
         }
-        
-        function addUser() {
-            const username = document.getElementById('newUsername').value;
-            const email = document.getElementById('newEmail').value;
-            const role = document.getElementById('newRole').value;
-            
-            if (!username || !email || !role) {
-                showToast('请填写必填字段', 'error');
+
+        function renderUsers(data) {
+            const tbody = document.getElementById('userTableBody');
+            const displayUsers = data || users;
+
+            if (displayUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">暂无数据</td></tr>';
                 return;
             }
-            
-            const tbody = document.getElementById('userTableBody');
-            const tr = document.createElement('tr');
-            tr.dataset.role = role;
-            tr.dataset.status = 'active';
-            tr.innerHTML = `
-                <td>
-                    <div class="user-cell">
-                        <div class="user-cell-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">${username.charAt(0).toUpperCase()}</div>
-                        <div class="user-cell-info">
-                            <span class="user-cell-name">${username}</span>
-                            <span class="user-cell-email">${email}</span>
-                        </div>
-                    </div>
-                </td>
-                <td><span class="role-badge ${role}">${role === 'admin' ? '管理员' : role === 'editor' ? '编辑者' : '查看者'}</span></td>
-                <td>${document.getElementById('newDepartment').value || '-'}</td>
-                <td>刚刚</td>
-                <td><span class="status-badge active"><span class="status-dot"></span>激活</span></td>
-                <td>
-                    <div class="table-actions">
-                        <button class="table-btn" onclick="editUser(this)">✏️ 编辑</button>
-                        <button class="table-btn danger" onclick="deleteUser(this)">🗑 删除</button>
-                    </div>
-                </td>
-            `;
-            tbody.insertBefore(tr, tbody.firstChild);
-            
-            document.getElementById('newUsername').value = '';
-            document.getElementById('newEmail').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('newRole').value = '';
-            document.getElementById('newDepartment').value = '';
-            
-            closeModal('addUserModal');
-            showToast('用户创建成功');
+
+            tbody.innerHTML = displayUsers.map(user => {
+                const isSuperAdmin = user.username === 'admin';
+                const roleNames = user.roles && user.roles.length > 0
+                    ? user.roles.map(r => r.roleName).join(', ')
+                    : (isSuperAdmin ? '超级管理员' : '待分配');
+
+                const roleClass = isSuperAdmin ? 'admin' : (user.roles?.length > 0 ? 'editor' : 'viewer');
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="user-info-cell">
+                                <div class="user-avatar" style="background: ${getAvatarColor(user.username)}">${user.username[0].toUpperCase()}</div>
+                                <div style="margin-left: 10px;">
+                                    <div class="user-username">${user.username}</div>
+                                    <div class="user-email">${user.email || '-'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="role-badge ${roleClass}">${roleNames}</span>
+                        </td>
+                        <td>${user.nickname || '-'}</td>
+                        <td>${user.lastLoginTime ? new Date(user.lastLoginTime).toLocaleString() : '从未登录'}</td>
+                        <td>
+                            <span class="status-badge ${user.status === 1 ? 'active' : 'inactive'}">
+                                <span class="status-dot"></span>${user.status === 1 ? '激活' : '禁用'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                ${window.adminLayout.checkPermission('users:update') ? `<button class="table-btn" onclick='openEditModal(${JSON.stringify(user)})' title="编辑">✎ 编辑</button>` : ''}
+                                ${window.adminLayout.checkPermission('users:update') ? `<button class="table-btn password" onclick="openPasswordModal(${user.id})" title="密码">🔑 密码</button>` : ''}
+                                ${!isSuperAdmin && window.adminLayout.checkPermission('users:delete') ? `<button class="table-btn danger" onclick="deleteUser(${user.id})" title="删除">🗑 删除</button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-        
-        function filterUsers() {
-            const roleFilter = document.getElementById('roleFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            
-            document.querySelectorAll('#userTableBody tr').forEach(row => {
-                const role = row.dataset.role;
-                const status = row.dataset.status;
-                const name = row.querySelector('.user-cell-name').textContent.toLowerCase();
-                const email = row.querySelector('.user-cell-email').textContent.toLowerCase();
-                
-                const matchRole = !roleFilter || role === roleFilter;
-                const matchStatus = !statusFilter || status === statusFilter;
-                const matchSearch = !searchText || name.includes(searchText) || email.includes(searchText);
-                
-                row.style.display = matchRole && matchStatus && matchSearch ? '' : 'none';
-            });
+
+
+        async function addUser() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const email = document.getElementById('newEmail').value;
+            const roleId = document.getElementById('newRole').value;
+
+            if (!username || !password) {
+                showToast('用户名和密码必填', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        email,
+                        roleIds: roleId ? [parseInt(roleId)] : []
+                    })
+                });
+                if (response.ok) {
+                    showToast('用户创建成功');
+                    closeModal('addUserModal');
+                    fetchUsers(1);
+                } else {
+                    const err = await response.json();
+                    showToast(err.message || '创建失败', 'danger');
+                }
+            } catch (err) {
+                showToast('网络错误', 'danger');
+            }
         }
-        
+
+        function openEditModal(user) {
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editNickname').value = user.nickname || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editStatus').value = user.status;
+
+            // Set role
+            const roleSelect = document.getElementById('editRole');
+            if (roleSelect) {
+                const userRoleId = user.roles && user.roles.length > 0 ? user.roles[0].id : '';
+                roleSelect.value = userRoleId;
+            }
+
+            openModal('editUserModal');
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('editUserId').value;
+            const roleId = document.getElementById('editRole').value;
+            const data = {
+                nickname: document.getElementById('editNickname').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                status: parseInt(document.getElementById('editStatus').value),
+                roleIds: roleId ? [parseInt(roleId)] : []
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    showToast('保存成功');
+                    closeModal('editUserModal');
+                    fetchUsers(currentPage);
+                }
+            } catch (err) {
+                showToast('保存失败', 'danger');
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('确定要禁用该用户吗？')) return;
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showToast('用户已禁用');
+                    fetchUsers(currentPage);
+                }
+            } catch (err) {
+                showToast('操作失败', 'danger');
+            }
+        }
+
+        function openPasswordModal(id) {
+            document.getElementById('pwUserId').value = id;
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('confirmPasswordInput').value = '';
+            openModal('changePasswordModal');
+        }
+
+        async function submitPasswordChange() {
+            const id = document.getElementById('pwUserId').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
+            if (!newPassword || newPassword !== confirmPassword) {
+                showToast('密码不一致或为空', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/${id}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+                if (response.ok) {
+                    showToast('密码修改成功');
+                    closeModal('changePasswordModal');
+                }
+            } catch (err) {
+                showToast('修改失败', 'danger');
+            }
+        }
+
+        function debounceFetch() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => fetchUsers(1), 500);
+        }
+
         function resetFilter() {
             document.getElementById('roleFilter').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('searchInput').value = '';
-            filterUsers();
+            fetchUsers(1);
         }
-        
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
         }
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeOut {
-                to { opacity: 0; transform: translateX(-20px); }
-            }
-        `;
-        document.head.appendChild(style);
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+        function getAvatarColor(name) {
+            if (!name) return '#667eea';
+            const colors = ['#667eea', '#f093fb', '#4facfe', '#fa709a', '#a8edea'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchRoles();
+            fetchUsers(1);
+        });
     </script>
 </body>
+
 </html>

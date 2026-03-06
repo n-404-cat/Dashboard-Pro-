@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,18 +14,18 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-        
+
         .filter-group {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .filter-label {
             font-size: 13px;
             color: var(--text-muted);
         }
-        
+
         .filter-select {
             height: 36px;
             padding: 0 32px 0 12px;
@@ -37,12 +38,12 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .filter-select:focus {
             outline: none;
             border-color: var(--primary-lighter);
         }
-        
+
         .filter-btn {
             height: 36px;
             padding: 0 16px;
@@ -54,18 +55,18 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .filter-btn:hover {
             border-color: var(--primary-lighter);
             color: var(--primary);
         }
-        
+
         .filter-btn.active {
             background: var(--primary);
             border-color: var(--primary);
             color: white;
         }
-        
+
         .view-toggle {
             margin-left: auto;
             display: flex;
@@ -73,7 +74,7 @@
             border-radius: 6px;
             overflow: hidden;
         }
-        
+
         .view-btn {
             width: 36px;
             height: 36px;
@@ -87,17 +88,17 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .view-btn:hover {
             background: var(--bg-light);
             color: var(--text-body);
         }
-        
+
         .view-btn.active {
             background: var(--bg-light);
             color: var(--primary);
         }
-        
+
         /* 筛选栏 */
         .filter-bar {
             display: flex;
@@ -105,18 +106,18 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-        
+
         .filter-group {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .filter-label {
             font-size: 13px;
             color: var(--text-muted);
         }
-        
+
         .filter-select {
             height: 36px;
             padding: 0 32px 0 12px;
@@ -128,12 +129,12 @@
             cursor: pointer;
             appearance: none;
         }
-        
+
         .filter-select:focus {
             outline: none;
             border-color: var(--primary-lighter);
         }
-        
+
         .filter-btn {
             padding: 8px 16px;
             border: 1px solid var(--border);
@@ -144,18 +145,18 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .filter-btn:hover {
             border-color: var(--primary-lighter);
             color: var(--primary);
         }
-        
+
         .filter-btn.active {
             background: var(--primary);
             border-color: var(--primary);
             color: white;
         }
-        
+
         /* 视图切换 */
         .view-toggle {
             display: flex;
@@ -164,7 +165,7 @@
             overflow: hidden;
             margin-left: auto;
         }
-        
+
         .view-btn {
             padding: 8px 12px;
             border: none;
@@ -173,45 +174,45 @@
             font-size: 16px;
             transition: all 0.2s;
         }
-        
+
         .view-btn.active {
             background: var(--primary);
             color: white;
         }
-        
+
         .view-btn:first-child {
             border-right: 1px solid var(--border);
         }
-        
+
         /* 模板列表 - 卡片视图 */
         .template-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 20px;
         }
-        
+
         .template-card {
             background: white;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
             cursor: pointer;
             transition: all 0.3s;
             border: 2px solid transparent;
         }
-        
+
         .template-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
             border-color: var(--primary-lighter);
         }
-        
+
         .template-thumb {
             height: 160px;
             position: relative;
             overflow: hidden;
         }
-        
+
         .template-thumb-bg {
             width: 100%;
             height: 100%;
@@ -221,18 +222,35 @@
             font-size: 56px;
             transition: transform 0.3s;
         }
-        
+
         .template-card:hover .template-thumb-bg {
             transform: scale(1.05);
         }
-        
-        .template-thumb-bg.blue { background: linear-gradient(135deg, #1E3A5F 0%, #2E5C8A 100%); }
-        .template-thumb-bg.green { background: linear-gradient(135deg, #28A745 0%, #20C997 100%); }
-        .template-thumb-bg.purple { background: linear-gradient(135deg, #6F42C1 0%, #E83E8C 100%); }
-        .template-thumb-bg.orange { background: linear-gradient(135deg, #FD7E14 0%, #FFC107 100%); }
-        .template-thumb-bg.cyan { background: linear-gradient(135deg, #17A2B8 0%, #00D4FF 100%); }
-        .template-thumb-bg.red { background: linear-gradient(135deg, #DC3545 0%, #FF6B6B 100%); }
-        
+
+        .template-thumb-bg.blue {
+            background: linear-gradient(135deg, #1E3A5F 0%, #2E5C8A 100%);
+        }
+
+        .template-thumb-bg.green {
+            background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
+        }
+
+        .template-thumb-bg.purple {
+            background: linear-gradient(135deg, #6F42C1 0%, #E83E8C 100%);
+        }
+
+        .template-thumb-bg.orange {
+            background: linear-gradient(135deg, #FD7E14 0%, #FFC107 100%);
+        }
+
+        .template-thumb-bg.cyan {
+            background: linear-gradient(135deg, #17A2B8 0%, #00D4FF 100%);
+        }
+
+        .template-thumb-bg.red {
+            background: linear-gradient(135deg, #DC3545 0%, #FF6B6B 100%);
+        }
+
         .template-badge {
             position: absolute;
             top: 12px;
@@ -242,18 +260,29 @@
             border-radius: 20px;
             backdrop-filter: blur(4px);
         }
-        
-        .template-badge.published { background: rgba(40,167,69,0.9); color: white; }
-        .template-badge.draft { background: rgba(255,193,7,0.9); color: #333; }
-        .template-badge.error { background: rgba(220,53,69,0.9); color: white; }
-        
+
+        .template-badge.published {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+        }
+
+        .template-badge.draft {
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+        }
+
+        .template-badge.error {
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+        }
+
         .template-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -261,17 +290,17 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        
+
         .template-card:hover .template-overlay {
             opacity: 1;
         }
-        
+
         .template-overlay-btn {
             width: 44px;
             height: 44px;
             border-radius: 50%;
             border: 2px solid white;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             color: white;
             font-size: 18px;
             cursor: pointer;
@@ -280,24 +309,24 @@
             justify-content: center;
             transition: all 0.2s;
         }
-        
+
         .template-overlay-btn:hover {
             background: white;
             color: var(--primary);
             transform: scale(1.1);
         }
-        
+
         .template-info {
             padding: 16px;
         }
-        
+
         .template-name {
             font-size: 15px;
             font-weight: 500;
             color: var(--text-dark);
             margin-bottom: 8px;
         }
-        
+
         .template-meta {
             display: flex;
             justify-content: space-between;
@@ -305,40 +334,40 @@
             font-size: 12px;
             color: var(--text-muted);
         }
-        
+
         .template-stats {
             display: flex;
             gap: 12px;
         }
-        
+
         .template-stat {
             display: flex;
             align-items: center;
             gap: 4px;
         }
-        
+
         /* 模板列表 - 表格视图 */
         .template-table {
             display: none;
             background: white;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         }
-        
+
         .template-table.show {
             display: block;
         }
-        
+
         .template-grid.hide {
             display: none;
         }
-        
+
         .table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         .table th {
             text-align: left;
             padding: 14px 16px;
@@ -349,22 +378,22 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .table td {
             padding: 16px;
             border-bottom: 1px solid var(--border);
             font-size: 14px;
             color: var(--text-body);
         }
-        
+
         .table tbody tr {
             transition: background 0.2s;
         }
-        
+
         .table tbody tr:hover {
             background: var(--bg-light);
         }
-        
+
         .table-thumb {
             width: 80px;
             height: 45px;
@@ -375,12 +404,12 @@
             font-size: 24px;
             color: white;
         }
-        
+
         .table-name {
             font-weight: 500;
             color: var(--text-dark);
         }
-        
+
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -390,34 +419,34 @@
             font-size: 12px;
             font-weight: 500;
         }
-        
+
         .status-badge.success {
-            background: rgba(40,167,69,0.1);
+            background: rgba(40, 167, 69, 0.1);
             color: var(--success);
         }
-        
+
         .status-badge.warning {
-            background: rgba(255,193,7,0.1);
+            background: rgba(255, 193, 7, 0.1);
             color: #B8860B;
         }
-        
+
         .status-badge.error {
-            background: rgba(220,53,69,0.1);
+            background: rgba(220, 53, 69, 0.1);
             color: var(--danger);
         }
-        
+
         .status-dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
             background: currentColor;
         }
-        
+
         .table-btns {
             display: flex;
             gap: 8px;
         }
-        
+
         .table-btn {
             padding: 6px 12px;
             font-size: 13px;
@@ -428,72 +457,22 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .table-btn:hover {
             border-color: var(--primary-lighter);
-            background: rgba(74,144,217,0.1);
+            background: rgba(74, 144, 217, 0.1);
         }
-        
+
         .table-btn.danger {
             color: var(--danger);
         }
-        
+
         .table-btn.danger:hover {
             border-color: var(--danger);
-            background: rgba(220,53,69,0.1);
+            background: rgba(220, 53, 69, 0.1);
         }
-        
-        /* 分页 */
-        .pagination {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-            margin-top: 20px;
-        }
-        
-        .pagination-info {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-        
-        .pagination-btns {
-            display: flex;
-            gap: 6px;
-        }
-        
-        .page-btn {
-            min-width: 36px;
-            height: 36px;
-            padding: 0 12px;
-            border: 1px solid var(--border);
-            background: white;
-            border-radius: 6px;
-            font-size: 13px;
-            color: var(--text-body);
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .page-btn:hover:not(:disabled) {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .page-btn.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-        
-        .page-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
+
+
         /* 模态框 */
         .modal-overlay {
             position: fixed;
@@ -501,7 +480,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -510,12 +489,12 @@
             visibility: hidden;
             transition: all 0.3s;
         }
-        
+
         .modal-overlay.show {
             opacity: 1;
             visibility: visible;
         }
-        
+
         .modal {
             background: white;
             border-radius: 16px;
@@ -525,11 +504,11 @@
             transition: all 0.3s;
             overflow: hidden;
         }
-        
+
         .modal-overlay.show .modal {
             transform: scale(1) translateY(0);
         }
-        
+
         .modal-header {
             padding: 20px 24px;
             border-bottom: 1px solid var(--border);
@@ -537,13 +516,13 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .modal-title {
             font-size: 18px;
             font-weight: 600;
             color: var(--text-dark);
         }
-        
+
         .modal-close {
             width: 32px;
             height: 32px;
@@ -554,33 +533,33 @@
             font-size: 18px;
             color: var(--text-muted);
         }
-        
+
         .modal-close:hover {
             background: var(--bg-light);
         }
-        
+
         .modal-body {
             padding: 24px;
         }
-        
+
         .modal-form {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-        
+
         .form-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
-        
+
         .form-label {
             font-size: 14px;
             font-weight: 500;
             color: var(--text-body);
         }
-        
+
         .form-input {
             height: 42px;
             padding: 0 14px;
@@ -589,13 +568,13 @@
             font-size: 14px;
             transition: all 0.2s;
         }
-        
+
         .form-input:focus {
             outline: none;
             border-color: var(--primary-lighter);
-            box-shadow: 0 0 0 3px rgba(74,144,217,0.1);
+            box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
         }
-        
+
         .form-textarea {
             height: 100px;
             padding: 12px 14px;
@@ -605,12 +584,12 @@
             resize: none;
             font-family: inherit;
         }
-        
+
         .form-textarea:focus {
             outline: none;
             border-color: var(--primary-lighter);
         }
-        
+
         .modal-footer {
             padding: 16px 24px;
             border-top: 1px solid var(--border);
@@ -618,90 +597,49 @@
             justify-content: flex-end;
             gap: 12px;
         }
-        
-        /* Toast 提示 */
-        .toast-container {
-            position: fixed;
-            top: 80px;
-            right: 24px;
-            z-index: 1100;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .toast {
-            padding: 14px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
-            min-width: 280px;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(100px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .toast.success {
-            border-left: 4px solid var(--success);
-        }
-        
-        .toast.error {
-            border-left: 4px solid var(--danger);
-        }
-        
-        .toast-icon {
-            font-size: 20px;
-        }
-        
-        .toast.success .toast-icon { color: var(--success); }
-        .toast.error .toast-icon { color: var(--danger); }
-        
-        .toast-message {
-            font-size: 14px;
-            color: var(--text-dark);
-        }
-        
+
+
         @media (max-width: 1200px) {
             .template-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
-        
+
         @media (max-width: 900px) {
             .template-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+
             .filter-bar {
                 flex-direction: column;
             }
+
             .view-toggle {
                 margin-left: 0;
                 margin-top: 12px;
             }
         }
-        
+
         @media (max-width: 768px) {
             .sidebar {
                 display: none;
             }
+
             .main {
                 margin-left: 0;
             }
+
             .search-box {
                 display: none;
             }
+
             .template-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <!-- 引入布局脚本 -->
     <script src="layout.js"></script>
@@ -728,7 +666,7 @@
                 </button>
             </div>
         </div>
-        
+
         <!-- 筛选栏 -->
         <div class="filter-bar">
             <div class="filter-group">
@@ -742,7 +680,7 @@
                     <option value="operations">运维</option>
                 </select>
             </div>
-            
+
             <div class="filter-group">
                 <span class="filter-label">状态:</span>
                 <select class="filter-select" id="statusFilter">
@@ -752,18 +690,18 @@
                     <option value="error">异常</option>
                 </select>
             </div>
-            
+
             <button class="filter-btn" onclick="filterTemplates('all')">全部</button>
             <button class="filter-btn active" onclick="filterTemplates('published')">已发布</button>
             <button class="filter-btn" onclick="filterTemplates('draft')">草稿</button>
             <button class="filter-btn" onclick="filterTemplates('error')">异常</button>
-            
+
             <div class="view-toggle">
                 <button class="view-btn active" onclick="switchView('grid')" title="网格视图">▦</button>
                 <button class="view-btn" onclick="switchView('table')" title="列表视图">☰</button>
             </div>
         </div>
-        
+
         <!-- 模板网格视图 -->
         <div class="template-grid" id="templateGrid">
             <div class="template-card" onclick="window.location.href='editor.html'">
@@ -771,9 +709,12 @@
                     <div class="template-thumb-bg blue">📊</div>
                     <span class="template-badge published">已发布</span>
                     <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览" onclick="event.stopPropagation(); previewTemplate('销售数据大屏')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑" onclick="event.stopPropagation(); editTemplate('销售数据大屏')">✎</button>
-                        <button class="template-overlay-btn" title="复制" onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
+                        <button class="template-overlay-btn" title="预览"
+                            onclick="event.stopPropagation(); previewTemplate('销售数据大屏')">👁️</button>
+                        <button class="template-overlay-btn" title="编辑"
+                            onclick="event.stopPropagation(); editTemplate('销售数据大屏')">✎</button>
+                        <button class="template-overlay-btn" title="复制"
+                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
                     </div>
                 </div>
                 <div class="template-info">
@@ -787,15 +728,18 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg green">📈</div>
                     <span class="template-badge published">已发布</span>
                     <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览" onclick="event.stopPropagation(); previewTemplate('实时监控看板')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑" onclick="event.stopPropagation(); editTemplate('实时监控看板')">✎</button>
-                        <button class="template-overlay-btn" title="复制" onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
+                        <button class="template-overlay-btn" title="预览"
+                            onclick="event.stopPropagation(); previewTemplate('实时监控看板')">👁️</button>
+                        <button class="template-overlay-btn" title="编辑"
+                            onclick="event.stopPropagation(); editTemplate('实时监控看板')">✎</button>
+                        <button class="template-overlay-btn" title="复制"
+                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
                     </div>
                 </div>
                 <div class="template-info">
@@ -809,15 +753,18 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg purple">💰</div>
                     <span class="template-badge draft">草稿</span>
                     <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览" onclick="event.stopPropagation(); previewTemplate('财务分析报告')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑" onclick="event.stopPropagation(); editTemplate('财务分析报告')">✎</button>
-                        <button class="template-overlay-btn" title="复制" onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
+                        <button class="template-overlay-btn" title="预览"
+                            onclick="event.stopPropagation(); previewTemplate('财务分析报告')">👁️</button>
+                        <button class="template-overlay-btn" title="编辑"
+                            onclick="event.stopPropagation(); editTemplate('财务分析报告')">✎</button>
+                        <button class="template-overlay-btn" title="复制"
+                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
                     </div>
                 </div>
                 <div class="template-info">
@@ -831,7 +778,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg orange">👥</div>
@@ -853,7 +800,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg cyan">🏭</div>
@@ -875,7 +822,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg red">🎯</div>
@@ -897,7 +844,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg blue">🌐</div>
@@ -919,7 +866,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="template-card">
                 <div class="template-thumb">
                     <div class="template-thumb-bg green">📞</div>
@@ -942,7 +889,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 模板表格视图 -->
         <div class="template-table" id="templateTable">
             <table class="table">
@@ -1036,7 +983,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <!-- 分页 -->
         <div class="pagination">
             <span class="pagination-info">共 128 条记录，第 1/13 页</span>
@@ -1051,7 +998,7 @@
             </div>
         </div>
     </main>
-    
+
     <!-- 新建模板模态框 -->
     <div class="modal-overlay" id="createModal">
         <div class="modal">
@@ -1088,20 +1035,20 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Toast 容器 -->
     <div class="toast-container" id="toastContainer"></div>
-    
+
     <script>
         // 视图切换
         function switchView(view) {
             const gridView = document.getElementById('templateGrid');
             const tableView = document.getElementById('templateTable');
             const viewBtns = document.querySelectorAll('.view-btn');
-            
+
             viewBtns.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             if (view === 'grid') {
                 gridView.classList.remove('hide');
                 tableView.classList.remove('show');
@@ -1110,60 +1057,58 @@
                 tableView.classList.add('show');
             }
         }
-        
+
         // 筛选
         function filterTemplates(status) {
             const btns = document.querySelectorAll('.filter-btn');
             btns.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             // 这里可以添加实际的筛选逻辑
         }
-        
+
         // 模态框
         function openModal(modalId) {
             document.getElementById(modalId).classList.add('show');
         }
-        
+
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('show');
         }
-        
+
         // 点击遮罩关闭模态框
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', function(e) {
+            overlay.addEventListener('click', function (e) {
                 if (e.target === this) {
                     this.classList.remove('show');
                 }
             });
         });
-        
+
         // 创建模板
         function createTemplate() {
             closeModal('createModal');
-            showToast('success', '模板创建成功！');
+            window.showToast('模板创建成功！');
         }
-        
-        // Toast 提示
-        function showToast(type, message) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `
-                <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
-                <span class="toast-message">${message}</span>
-            `;
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-        
+
+        // 初始渲染分页（静态演示）
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.adminLayout) {
+                window.adminLayout.renderPagination('paginationContainer', {
+                    total: 48,
+                    page: 1,
+                    pageSize: 12,
+                    totalPages: 4
+                }, (p) => {
+                    console.log('Jump to page:', p);
+                    window.showToast(`跳转到第 ${p} 页`);
+                });
+            }
+        });
+
         // 预览模板
         function previewTemplate(name) {
-            showToast('success', `正在打开「${name}」预览...`);
+            window.showToast(`正在打开「${name}」预览...`);
             setTimeout(() => {
                 if (name === '销售数据大屏') {
                     window.open('../screen/sales-dashboard.html', '_blank');
@@ -1174,21 +1119,22 @@
                 }
             }, 500);
         }
-        
+
         // 编辑模板
         function editTemplate(name) {
-            showToast('success', `正在打开「${name}」编辑器...`);
+            window.showToast(`正在打开「${name}」编辑器...`);
             setTimeout(() => {
                 window.location.href = 'editor.html';
             }, 500);
         }
-        
+
         // 删除模板
         function deleteTemplate(name) {
             if (confirm(`确定要删除模板「${name}」吗？此操作不可恢复。`)) {
-                showToast('success', `模板「${name}」已删除`);
+                window.showToast(`模板「${name}」已删除`);
             }
         }
     </script>
 </body>
+
 </html>
