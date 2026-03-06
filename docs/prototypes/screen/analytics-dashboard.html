@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运营分析大屏 - Dashboard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --pink: #FF6B9D; --purple: #C792EA; --blue: #82AAFF; --cyan: #89DDFF; --green: #C3E88D; --yellow: #FFCB6B; --orange: #F78C6C; }
+        body { font-family: "PingFang SC", "SF Pro Display", sans-serif; background: #13131a; color: white; overflow: hidden; height: 100vh; }
+        
+        .screen { width: 100vw; height: 100vh; background: linear-gradient(145deg, #13131a 0%, #1a1a24 50%, #0f0f14 100%); padding: 16px; display: flex; flex-direction: column; position: relative; }
+        .screen::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 80% 80%, rgba(199,146,234,0.06) 0%, transparent 40%), radial-gradient(circle at 20% 20%, rgba(130,170,255,0.06) 0%, transparent 40%); pointer-events: none; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 12px; position: relative; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .logo { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .title { font-size: 20px; font-weight: 500; letter-spacing: 1px; background: linear-gradient(90deg, #fff, var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .time-box { text-align: right; }
+        .time { font-size: 26px; font-family: "SF Mono", monospace; background: linear-gradient(90deg, var(--pink), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .date { font-size: 11px; color: rgba(255,255,255,0.4); }
+        
+        .main-content { flex: 1; display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 12px; position: relative; z-index: 10; }
+        .column { display: flex; flex-direction: column; gap: 12px; }
+        
+        .card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; }
+        .card-title { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .card-title::before { content: ''; width: 3px; height: 12px; background: linear-gradient(180deg, var(--pink), var(--purple)); border-radius: 2px; }
+        
+        /* 用户统计 */
+        .user-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .user-stat { padding: 16px 12px; background: rgba(0,0,0,0.2); border-radius: 10px; text-align: center; }
+        .user-icon { font-size: 24px; margin-bottom: 8px; }
+        .user-num { font-size: 24px; font-weight: 700; font-family: "SF Mono", monospace; }
+        .user-num.pink { color: var(--pink); }
+        .user-num.purple { color: var(--purple); }
+        .user-num.blue { color: var(--blue); }
+        .user-num.cyan { color: var(--cyan); }
+        .user-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+        .user-trend { font-size: 10px; margin-top: 4px; }
+        .user-trend.up { color: var(--green); }
+        .user-trend.down { color: var(--pink); }
+        
+        /* 漏斗图 */
+        .funnel { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0; }
+        .funnel-step { height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: 500; transition: all 0.3s; position: relative; }
+        .funnel-step:hover { transform: scaleX(1.02); }
+        .funnel-step:nth-child(1) { width: 100%; background: linear-gradient(90deg, var(--pink), var(--purple)); }
+        .funnel-step:nth-child(2) { width: 82%; background: linear-gradient(90deg, var(--purple), var(--blue)); }
+        .funnel-step:nth-child(3) { width: 64%; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+        .funnel-step:nth-child(4) { width: 46%; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+        .funnel-step:nth-child(5) { width: 30%; background: linear-gradient(90deg, var(--green), var(--yellow)); }
+        
+        /* 用户画像 */
+        .profile-list { display: flex; flex-direction: column; gap: 8px; }
+        .profile-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .profile-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 13px; margin-bottom: 2px; }
+        .profile-desc { font-size: 10px; color: rgba(255,255,255,0.4); }
+        .profile-value { font-size: 14px; font-weight: 600; font-family: "SF Mono", monospace; color: var(--pink); }
+        
+        /* 中间 */
+        .center-panel { display: flex; flex-direction: column; gap: 12px; }
+        
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .kpi-card { background: linear-gradient(135deg, rgba(199,146,234,0.1) 0%, rgba(130,170,255,0.05) 100%); border: 1px solid rgba(199,146,234,0.2); border-radius: 12px; padding: 16px 12px; text-align: center; }
+        .kpi-icon { font-size: 24px; margin-bottom: 8px; }
+        .kpi-value { font-size: 28px; font-weight: 700; font-family: "SF Mono", monospace; }
+        .kpi-value.pink { color: var(--pink); }
+        .kpi-value.purple { color: var(--purple); }
+        .kpi-value.blue { color: var(--blue); }
+        .kpi-value.cyan { color: var(--cyan); }
+        .kpi-value.green { color: var(--green); }
+        .kpi-value.yellow { color: var(--yellow); }
+        .kpi-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+        .kpi-change { font-size: 10px; margin-top: 4px; }
+        
+        .main-chart { flex: 1; min-height: 280px; }
+        .chart-container { height: 100%; display: flex; flex-direction: column; }
+        .chart-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .chart-tab { padding: 6px 14px; font-size: 11px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s; }
+        .chart-tab:hover { border-color: var(--pink); color: var(--pink); }
+        .chart-tab.active { background: linear-gradient(90deg, var(--pink), var(--purple)); border-color: transparent; color: white; }
+        
+        .area-chart { flex: 1; display: flex; align-items: flex-end; justify-content: space-around; padding: 20px 10px 40px; position: relative; }
+        .area-chart::before { content: ''; position: absolute; bottom: 35px; left: 10px; right: 10px; height: 1px; background: rgba(255,255,255,0.1); }
+        .area-bar { width: 40px; background: linear-gradient(180deg, var(--pink) 0%, rgba(199,109,157,0.3) 100%); border-radius: 6px 6px 0 0; animation: growUp 1s ease-out forwards; transform-origin: bottom; position: relative; }
+        @keyframes growUp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+        .area-bar::after { content: attr(data-value); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--pink); }
+        .area-label { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 10px; color: rgba(255,255,255,0.4); white-space: nowrap; }
+        
+        /* 用户留存 */
+        .retention-table { width: 100%; font-size: 11px; }
+        .retention-table th { text-align: left; padding: 8px; color: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .retention-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .retention-cell { padding: 4px 8px; border-radius: 4px; text-align: center; }
+        .retention-cell.high { background: rgba(195,232,141,0.2); color: var(--green); }
+        .retention-cell.medium { background: rgba(255,203,107,0.2); color: var(--yellow); }
+        .retention-cell.low { background: rgba(255,107,157,0.2); color: var(--pink); }
+        
+        /* 右侧 */
+        .right-panel { display: flex; flex-direction: column; gap: 12px; }
+        
+        /* 渠道分析 */
+        .channel-list { display: flex; flex-direction: column; gap: 10px; }
+        .channel-item { display: flex; align-items: center; gap: 10px; }
+        .channel-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .channel-info { flex: 1; }
+        .channel-name { font-size: 12px; margin-bottom: 4px; }
+        .channel-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .channel-fill { height: 100%; border-radius: 2px; }
+        .channel-value { font-size: 12px; font-weight: 600; font-family: "SF Mono", monospace; }
+        
+        /* 热门页面 */
+        .page-list { display: flex; flex-direction: column; gap: 8px; }
+        .page-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(0,0,0,0.2); border-radius: 6px; }
+        .page-rank { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+        .page-rank.top { background: linear-gradient(135deg, var(--pink), var(--purple)); }
+        .page-rank.normal { background: rgba(255,255,255,0.1); }
+        .page-name { flex: 1; font-size: 11px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .page-value { font-size: 12px; font-weight: 500; color: var(--cyan); }
+        
+        /* 底部 */
+        .footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; margin-top: 12px; position: relative; z-index: 10; }
+        .footer-left { display: flex; gap: 24px; font-size: 11px; color: rgba(255,255,255,0.4); }
+        .footer-item { display: flex; align-items: center; gap: 6px; }
+        .footer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+        .footer-right { font-size: 11px; color: rgba(255,255,255,0.3); }
+        
+        @media (max-width: 1200px) { .main-content { grid-template-columns: 1fr; } .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="screen">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo"><div class="logo-icon">📈</div><span class="title">运营分析中心</span></div>
+            </div>
+            <div class="header-right">
+                <div class="time-box">
+                    <div class="time" id="currentTime">14:35:28</div>
+                    <div class="date" id="currentDate">2024年1月15日</div>
+                </div>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="column">
+                <div class="card">
+                    <div class="card-title">用户概览</div>
+                    <div class="user-stats">
+                        <div class="user-stat">
+                            <div class="user-icon">👥</div>
+                            <div class="user-num pink">128.5K</div>
+                            <div class="user-label">总用户数</div>
+                            <div class="user-trend up">↑ 12.5%</div>
+                        </div>
+                        <div class="user-stat">
+                            <div class="user-icon">🆕</div>
+                            <div class="user-num purple">2,340</div>
+                            <div class="user-label">新增用户</div>
+                            <div class="user-trend up">↑ 8.2%</div>
+                        </div>
+                        <div class="user-stat">
+                            <div class="user-icon">✅</div>
+                            <div class="user-num blue">98.2K</div>
+                            <div class="user-label">活跃用户</div>
+                            <div class="user-trend up">↑ 5.6%</div>
+                        </div>
+                        <div class="user-stat">
+                            <div class="user-icon">💰</div>
+                            <div class="user-num cyan">¥328</div>
+                            <div class="user-label">人均收入</div>
+                            <div class="user-trend down">↓ 2.1%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">转化漏斗</div>
+                    <div class="funnel">
+                        <div class="funnel-step">访问量 128.5K</div>
+                        <div class="funnel-step">注册用户 28.2K</div>
+                        <div class="funnel-step">激活用户 18.6K</div>
+                        <div class="funnel-step">付费用户 8.9K</div>
+                        <div class="funnel-step">复购用户 5.2K</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">用户画像</div>
+                    <div class="profile-list">
+                        <div class="profile-item">
+                            <div class="profile-avatar" style="background: linear-gradient(135deg, var(--pink), var(--purple));">👩</div>
+                            <div class="profile-info">
+                                <div class="profile-name">25-35岁 女性</div>
+                                <div class="profile-desc">主要消费群体</div>
+                            </div>
+                            <div class="profile-value">42%</div>
+                        </div>
+                        <div class="profile-item">
+                            <div class="profile-avatar" style="background: linear-gradient(135deg, var(--blue), var(--cyan));">👨</div>
+                            <div class="profile-info">
+                                <div class="profile-name">一线城市</div>
+                                <div class="profile-desc">高消费力地区</div>
+                            </div>
+                            <div class="profile-value">38%</div>
+                        </div>
+                        <div class="profile-item">
+                            <div class="profile-avatar" style="background: linear-gradient(135deg, var(--green), var(--yellow));">📱</div>
+                            <div class="profile-info">
+                                <div class="profile-name">iOS 用户</div>
+                                <div class="profile-desc">付费意愿强</div>
+                            </div>
+                            <div class="profile-value">65%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="center-panel">
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">💵</div>
+                        <div class="kpi-value pink">¥2.86M</div>
+                        <div class="kpi-label">今日收入</div>
+                        <div class="kpi-change" style="color: var(--green);">↑ 15.2%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📦</div>
+                        <div class="kpi-value purple">4,528</div>
+                        <div class="kpi-label">订单数量</div>
+                        <div class="kpi-change" style="color: var(--green);">↑ 8.6%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">🎯</div>
+                        <div class="kpi-value blue">68.5%</div>
+                        <div class="kpi-label">转化率</div>
+                        <div class="kpi-change" style="color: var(--green);">↑ 3.2%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">⭐</div>
+                        <div class="kpi-value yellow">4.8</div>
+                        <div class="kpi-label">用户评分</div>
+                        <div class="kpi-change" style="color: var(--green);">↑ 0.2</div>
+                    </div>
+                </div>
+                
+                <div class="card main-chart">
+                    <div class="chart-container">
+                        <div class="chart-tabs">
+                            <div class="chart-tab active">小时</div>
+                            <div class="chart-tab">日</div>
+                            <div class="chart-tab">周</div>
+                            <div class="chart-tab">月</div>
+                        </div>
+                        <div class="area-chart">
+                            <div class="area-bar" style="height: 45%;" data-value="¥12K"><span class="area-label">08:00</span></div>
+                            <div class="area-bar" style="height: 65%;" data-value="¥18K"><span class="area-label">10:00</span></div>
+                            <div class="area-bar" style="height: 85%;" data-value="¥25K"><span class="area-label">12:00</span></div>
+                            <div class="area-bar" style="height: 70%;" data-value="¥20K"><span class="area-label">14:00</span></div>
+                            <div class="area-bar" style="height: 90%;" data-value="¥28K"><span class="area-label">16:00</span></div>
+                            <div class="area-bar" style="height: 95%;" data-value="¥32K"><span class="area-label">18:00</span></div>
+                            <div class="area-bar" style="height: 80%;" data-value="¥22K"><span class="area-label">20:00</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">用户留存率</div>
+                    <table class="retention-table">
+                        <thead>
+                            <tr><th></th><th>次日</th><th>7日</th><th>30日</th><th>90日</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>本周</td><td><span class="retention-cell high">45%</span></td><td><span class="retention-cell medium">28%</span></td><td><span class="retention-cell low">18%</span></td><td><span class="retention-cell low">12%</span></td></tr>
+                            <tr><td>上周</td><td><span class="retention-cell high">42%</span></td><td><span class="retention-cell medium">25%</span></td><td><span class="retention-cell low">16%</span></td><td><span class="retention-cell low">10%</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="column right-panel">
+                <div class="card">
+                    <div class="card-title">流量来源</div>
+                    <div class="channel-list">
+                        <div class="channel-item">
+                            <div class="channel-icon" style="background: linear-gradient(135deg, var(--pink), var(--purple));">🔍</div>
+                            <div class="channel-info">
+                                <div class="channel-name">搜索引擎</div>
+                                <div class="channel-bar"><div class="channel-fill" style="width: 42%; background: linear-gradient(90deg, var(--pink), var(--purple));"></div></div>
+                            </div>
+                            <div class="channel-value" style="color: var(--pink);">42%</div>
+                        </div>
+                        <div class="channel-item">
+                            <div class="channel-icon" style="background: linear-gradient(135deg, var(--blue), var(--cyan));">📱</div>
+                            <div class="channel-info">
+                                <div class="channel-name">移动应用</div>
+                                <div class="channel-bar"><div class="channel-fill" style="width: 35%; background: linear-gradient(90deg, var(--blue), var(--cyan));"></div></div>
+                            </div>
+                            <div class="channel-value" style="color: var(--blue);">35%</div>
+                        </div>
+                        <div class="channel-item">
+                            <div class="channel-icon" style="background: linear-gradient(135deg, var(--green), var(--yellow));">🔗</div>
+                            <div class="channel-info">
+                                <div class="channel-name">社交媒体</div>
+                                <div class="channel-bar"><div class="channel-fill" style="width: 18%; background: linear-gradient(90deg, var(--green), var(--yellow));"></div></div>
+                            </div>
+                            <div class="channel-value" style="color: var(--green);">18%</div>
+                        </div>
+                        <div class="channel-item">
+                            <div class="channel-icon" style="background: linear-gradient(135deg, var(--orange), var(--yellow));">📧</div>
+                            <div class="channel-info">
+                                <div class="channel-name">邮件营销</div>
+                                <div class="channel-bar"><div class="channel-fill" style="width: 12%; background: linear-gradient(90deg, var(--orange), var(--yellow));"></div></div>
+                            </div>
+                            <div class="channel-value" style="color: var(--orange);">12%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">热门页面</div>
+                    <div class="page-list">
+                        <div class="page-item">
+                            <div class="page-rank top">1</div>
+                            <div class="page-name">/首页</div>
+                            <div class="page-value">28.5K</div>
+                        </div>
+                        <div class="page-item">
+                            <div class="page-rank top">2</div>
+                            <div class="page-name">/product/detail/1285</div>
+                            <div class="page-value">15.2K</div>
+                        </div>
+                        <div class="page-item">
+                            <div class="page-rank top">3</div>
+                            <div class="page-name">/cart</div>
+                            <div class="page-value">12.8K</div>
+                        </div>
+                        <div class="page-item">
+                            <div class="page-rank normal">4</div>
+                            <div class="page-name">/category/electronics</div>
+                            <div class="page-value">9.6K</div>
+                        </div>
+                        <div class="page-item">
+                            <div class="page-rank normal">5</div>
+                            <div class="page-name">/user/profile</div>
+                            <div class="page-value">7.2K</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">设备分布</div>
+                    <div style="display: flex; justify-content: space-around; padding: 10px 0;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 32px;">📱</div>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--pink);">65%</div>
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.4);">iOS</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 32px;">🤖</div>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--green);">28%</div>
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.4);">Android</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 32px;">💻</div>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--blue);">7%</div>
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.4);">PC</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="footer-left">
+                <div class="footer-item"><span class="footer-dot"></span>数据更新: 实时</div>
+                <div class="footer-item"><span class="footer-dot"></span>今日访客: 28,542</div>
+                <div class="footer-item"><span class="footer-dot"></span>平均停留: 5分32秒</div>
+            </div>
+            <div class="footer-right">© 2024 Dashboard Pro | 数据截至: 2024-01-15 14:35:28</div>
+        </footer>
+    </div>
+    
+    <script>
+        // Tab切换
+        document.querySelectorAll('.chart-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toTimeString().slice(0,8);
+            document.getElementById('currentDate').textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

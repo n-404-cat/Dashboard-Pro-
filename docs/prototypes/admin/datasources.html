@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据源管理 - 数据大屏管理系统</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .data-list { display: flex; flex-direction: column; gap: 12px; }
+        .data-card { background: white; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .data-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .data-icon.mysql { background: rgba(0,117,143,0.12); }
+        .data-icon.postgresql { background: rgba(51,103,145,0.12); }
+        .data-icon.mongodb { background: rgba(0,237,100,0.12); }
+        .data-icon.api { background: rgba(74,144,217,0.12); }
+        .data-icon.proxy { background: rgba(255,193,7,0.12); }
+        .data-icon.cert { background: rgba(156,39,176,0.12); }
+        .data-info { flex: 1; }
+        .data-name { font-size: 16px; font-weight: 500; color: var(--text-dark); margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+        .data-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .data-meta { display: flex; gap: 20px; font-size: 12px; color: var(--text-muted); }
+        .data-actions { display: flex; gap: 8px; }
+        .action-btn { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: white; font-size: 13px; cursor: pointer; }
+        .action-btn:hover { border-color: var(--primary-lighter); color: var(--primary); }
+        .action-btn.danger { color: var(--danger); }
+        .action-btn.danger:hover { background: rgba(220,53,69,0.1); }
+        
+        .type-selector { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
+        .type-option { padding: 16px 8px; border: 2px solid var(--border); border-radius: 10px; text-align: center; cursor: pointer; }
+        .type-option:hover { border-color: var(--primary-lighter); }
+        .type-option.active { border-color: var(--primary); background: rgba(30,58,95,0.05); }
+        .type-option-icon { font-size: 28px; margin-bottom: 6px; }
+        .type-option-label { font-size: 12px; }
+        
+        @media (max-width: 768px) { .type-selector { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+</head>
+<body>
+    <!-- 引入布局脚本 -->
+    <script src="layout.js"></script>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title-group">
+                <h1 class="page-title">数据源管理</h1>
+                <div class="breadcrumb"><a href="dashboard.html">首页</a><span>/</span><span>数据源管理</span></div>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('createModal')"><span>➕</span> 新增数据源</button>
+        </div>
+        
+        <div class="filter-bar">
+            <select class="filter-select"><option value="">全部类型</option><option value="mysql">MySQL</option><option value="postgresql">PostgreSQL</option><option value="mongodb">MongoDB</option><option value="api">REST API</option><option value="proxy">代理</option><option value="cert">证书</option></select>
+            <select class="filter-select"><option value="">全部状态</option><option value="normal">正常</option><option value="error">异常</option></select>
+        </div>
+        
+        <div class="data-list">
+            <div class="data-card">
+                <div class="data-icon mysql">🐬</div>
+                <div class="data-info">
+                    <div class="data-name">MySQL 生产库 <span class="status-badge success"><span class="status-dot"></span>正常</span></div>
+                    <div class="data-desc">主业务数据库，包含用户、订单、产品数据</div>
+                    <div class="data-meta"><span>📍 rm-mysql-prod.xxx.com:3306</span><span>🕐 2024-01-10</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <div class="data-icon postgresql">🐘</div>
+                <div class="data-info">
+                    <div class="data-name">PostgreSQL 数据仓库 <span class="status-badge success"><span class="status-dot"></span>正常</span></div>
+                    <div class="data-desc">数据仓库用于存储历史数据和分析</div>
+                    <div class="data-meta"><span>📍 pg-dw.xxx.com:5432</span><span>🕐 2024-01-08</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <div class="data-icon mongodb">🍃</div>
+                <div class="data-info">
+                    <div class="data-name">MongoDB 日志库 <span class="status-badge error"><span class="status-dot"></span>异常</span></div>
+                    <div class="data-desc">存储系统日志和用户行为数据</div>
+                    <div class="data-meta"><span>📍 mongodb://log-srv.com:27017</span><span>🕐 2024-01-05</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 修复</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <div class="data-icon api">🔗</div>
+                <div class="data-info">
+                    <div class="data-name">CRM API 数据源 <span class="status-badge success"><span class="status-dot"></span>正常</span></div>
+                    <div class="data-desc">对接CRM系统获取客户和商机数据</div>
+                    <div class="data-meta"><span>🌐 https://api.crm.example.com/v1</span><span>🕐 2024-01-03</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <div class="data-icon proxy">🌐</div>
+                <div class="data-info">
+                    <div class="data-name">代理服务器 <span class="status-badge success"><span class="status-dot"></span>正常</span></div>
+                    <div class="data-desc">HTTP/HTTPS 代理服务器配置</div>
+                    <div class="data-meta"><span>📍 proxy.example.com:8080</span><span>🕐 昨天</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+            
+            <div class="data-card">
+                <div class="data-icon cert">🔐</div>
+                <div class="data-info">
+                    <div class="data-name">证书认证服务 <span class="status-badge warning"><span class="status-dot"></span>未测试</span></div>
+                    <div class="data-desc">SSL/TLS 证书认证配置</div>
+                    <div class="data-meta"><span>📍 cert.example.com:443</span><span>🕐 今天</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 新增数据源模态框 -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">新增数据源</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="type-selector">
+                    <div class="type-option active" onclick="selectType(this, 'mysql')">
+                        <div class="type-option-icon">🐬</div>
+                        <div class="type-option-label">MySQL</div>
+                    </div>
+                    <div class="type-option" onclick="selectType(this, 'postgresql')">
+                        <div class="type-option-icon">🐘</div>
+                        <div class="type-option-label">PostgreSQL</div>
+                    </div>
+                    <div class="type-option" onclick="selectType(this, 'mongodb')">
+                        <div class="type-option-icon">🍃</div>
+                        <div class="type-option-label">MongoDB</div>
+                    </div>
+                    <div class="type-option" onclick="selectType(this, 'api')">
+                        <div class="type-option-icon">🔗</div>
+                        <div class="type-option-label">REST API</div>
+                    </div>
+                    <div class="type-option" onclick="selectType(this, 'proxy')">
+                        <div class="type-option-icon">🌐</div>
+                        <div class="type-option-label">代理</div>
+                    </div>
+                    <div class="type-option" onclick="selectType(this, 'cert')">
+                        <div class="type-option-icon">🔐</div>
+                        <div class="type-option-label">证书</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">数据源名称 *</label>
+                    <input type="text" class="form-input" id="dsName" placeholder="请输入数据源名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">主机地址 *</label>
+                    <input type="text" class="form-input" id="dsHost" placeholder="localhost 或 IP地址">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <input type="text" class="form-input" id="dsDesc" placeholder="请输入描述">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
+                <button class="btn btn-primary" onclick="createDatasource()">创建数据源</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script>
+        let selectedType = 'mysql';
+        
+        function toggleDropdown(menuId) {
+            document.getElementById(menuId).classList.toggle('show');
+            event.stopPropagation();
+        }
+        document.addEventListener('click', () => document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show')));
+        
+        function openModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target === o) o.classList.remove('show'); }));
+        
+        function selectType(el, type) {
+            document.querySelectorAll('.type-option').forEach(o => o.classList.remove('active'));
+            el.classList.add('active');
+            selectedType = type;
+        }
+        
+        function testConnection(btn) {
+            btn.textContent = '⏳ 测试中...';
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = '🔗 测试';
+                btn.disabled = false;
+                const success = Math.random() > 0.3;
+                showToast(success ? '连接成功！' : '连接失败', success ? 'success' : 'error');
+            }, 1500);
+        }
+        
+        function createDatasource() {
+            const name = document.getElementById('dsName').value;
+            if (!name) { showToast('请填写数据源名称', 'error'); return; }
+            
+            const list = document.querySelector('.data-list');
+            const card = document.createElement('div');
+            card.className = 'data-card';
+            card.innerHTML = `
+                <div class="data-icon ${selectedType}">${selectedType === 'mysql' ? '🐬' : selectedType === 'postgresql' ? '🐘' : selectedType === 'mongodb' ? '🍃' : selectedType === 'api' ? '🔗' : selectedType === 'proxy' ? '🌐' : '🔐'}</div>
+                <div class="data-info">
+                    <div class="data-name">${name} <span class="status-badge warning"><span class="status-dot"></span>未测试</span></div>
+                    <div class="data-desc">${document.getElementById('dsDesc').value || '暂无描述'}</div>
+                    <div class="data-meta"><span>📍 ${document.getElementById('dsHost').value || '-'}</span><span>🕐 刚刚</span></div>
+                </div>
+                <div class="data-actions">
+                    <button class="action-btn" onclick="testConnection(this)">🔗 测试</button>
+                    <button class="action-btn">✎ 编辑</button>
+                    <button class="action-btn danger">🗑</button>
+                </div>
+            `;
+            list.insertBefore(card, list.firstChild);
+            
+            document.getElementById('dsName').value = '';
+            document.getElementById('dsHost').value = '';
+            document.getElementById('dsDesc').value = '';
+            
+            closeModal('createModal');
+            showToast('数据源创建成功！');
+        }
+        
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast';
+            if (type === 'error') t.style.borderLeftColor = 'var(--danger)';
+            t.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${msg}</span>`;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

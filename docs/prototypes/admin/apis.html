@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接口配置 - 数据大屏管理系统</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .api-list { display: flex; flex-direction: column; gap: 12px; }
+        .api-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); transition: all 0.3s; border: 2px solid transparent; }
+        .api-card:hover { border-color: var(--primary-lighter); }
+        
+        .api-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .api-info { flex: 1; }
+        .api-name { font-size: 16px; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+        .api-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .api-path { display: flex; align-items: center; gap: 8px; font-size: 13px; font-family: "SF Mono", monospace; }
+        .method-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: white; }
+        .method-badge.get { background: var(--success); }
+        .method-badge.post { background: var(--primary-lighter); }
+        .method-badge.put { background: var(--warning); color: #333; }
+        .method-badge.delete { background: var(--danger); }
+        .api-url { color: var(--primary-lighter); background: var(--bg-light); padding: 4px 8px; border-radius: 4px; }
+        
+        .api-actions { display: flex; gap: 8px; }
+        
+        .api-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .api-stat { text-align: center; }
+        .api-stat-value { font-size: 18px; font-weight: 600; color: var(--text-dark); }
+        .api-stat-label { font-size: 11px; color: var(--text-muted); }
+        
+        .api-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+        .api-tag { padding: 2px 8px; background: var(--bg-light); border-radius: 4px; font-size: 11px; color: var(--text-muted); }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); display: none; }
+        .empty-state.show { display: block; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-title { font-size: 16px; font-weight: 500; color: var(--text-body); margin-bottom: 8px; }
+        
+        .test-result { margin-top: 16px; padding: 16px; border-radius: 8px; display: none; }
+        .test-result.show { display: block; }
+        .test-result.success { background: rgba(40,167,69,0.1); border: 1px solid rgba(40,167,69,0.2); }
+        .test-result.error { background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.2); }
+        .test-result pre { font-family: "SF Mono", monospace; font-size: 12px; color: var(--text-body); margin: 0; white-space: pre-wrap; }
+        
+        @media (max-width: 768px) { .api-stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <!-- 引入布局脚本 -->
+    <script src="layout.js"></script>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title-group">
+                <h1 class="page-title">接口配置</h1>
+                <div class="breadcrumb">
+                    <a href="dashboard.html">首页</a>
+                    <span>/</span>
+                    <span>接口配置</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('createApiModal')">
+                <span>➕</span>
+                新建接口
+            </button>
+        </div>
+        
+        <div class="filter-bar">
+            <select class="filter-select" id="methodFilter" onchange="filterApis()">
+                <option value="">全部方法</option>
+                <option value="get">GET</option>
+                <option value="post">POST</option>
+                <option value="put">PUT</option>
+                <option value="delete">DELETE</option>
+            </select>
+            <select class="filter-select" id="moduleFilter" onchange="filterApis()">
+                <option value="">全部模块</option>
+                <option value="template">模板</option>
+                <option value="datasource">数据源</option>
+                <option value="user">用户</option>
+                <option value="auth">认证</option>
+            </select>
+            <input type="text" class="filter-input" placeholder="搜索接口名称/路径..." id="searchInput" oninput="filterApis()">
+        </div>
+        
+        <!-- 接口列表 -->
+        <div class="api-list" id="apiList">
+            <div class="api-card" data-method="get" data-module="template">
+                <div class="api-header">
+                    <div class="api-info">
+                        <div class="api-name">
+                            获取模板列表
+                            <span class="method-badge get">GET</span>
+                        </div>
+                        <div class="api-desc">获取所有模板的基本信息列表</div>
+                        <div class="api-path">
+                            <span class="api-url">/api/v1/templates</span>
+                        </div>
+                    </div>
+                    <div class="api-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
+                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
+                    </div>
+                </div>
+                <div class="api-stats">
+                    <div class="api-stat"><div class="api-stat-value">1,234</div><div class="api-stat-label">调用次数</div></div>
+                    <div class="api-stat"><div class="api-stat-value">45ms</div><div class="api-stat-label">Avg响应</div></div>
+                    <div class="api-stat"><div class="api-stat-value">99.9%</div><div class="api-stat-label">成功率</div></div>
+                    <div class="api-stat"><div class="api-stat-value">今天</div><div class="api-stat-label">最后调用</div></div>
+                </div>
+                <div class="api-tags">
+                    <span class="api-tag">模板</span>
+                    <span class="api-tag">公开</span>
+                </div>
+            </div>
+            
+            <div class="api-card" data-method="post" data-module="template">
+                <div class="api-header">
+                    <div class="api-info">
+                        <div class="api-name">
+                            创建模板
+                            <span class="method-badge post">POST</span>
+                        </div>
+                        <div class="api-desc">创建一个新的数据大屏模板</div>
+                        <div class="api-path">
+                            <span class="api-url">/api/v1/templates</span>
+                        </div>
+                    </div>
+                    <div class="api-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
+                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
+                    </div>
+                </div>
+                <div class="api-stats">
+                    <div class="api-stat"><div class="api-stat-value">856</div><div class="api-stat-label">调用次数</div></div>
+                    <div class="api-stat"><div class="api-stat-value">68ms</div><div class="api-stat-label">Avg响应</div></div>
+                    <div class="api-stat"><div class="api-stat-value">98.5%</div><div class="api-stat-label">成功率</div></div>
+                    <div class="api-stat"><div class="api-stat-value">今天</div><div class="api-stat-label">最后调用</div></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">未找到匹配的接口</div>
+        </div>
+        
+        <div class="pagination">
+            <span class="pagination-info" id="paginationInfo">共 5 个接口</span>
+        </div>
+    </main>
+    
+    <!-- 新建接口模态框 -->
+    <div class="modal-overlay" id="createApiModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">新建接口</h3>
+                <button class="modal-close" onclick="closeModal('createApiModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">接口名称 *</label>
+                        <input type="text" class="form-input" id="apiName" placeholder="如：获取用户列表">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">请求方法 *</label>
+                        <select class="form-select" id="apiMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">接口路径 *</label>
+                    <input type="text" class="form-input" id="apiPath" placeholder="/api/v1/resource">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">接口描述</label>
+                    <textarea class="form-textarea" id="apiDesc" placeholder="简要描述接口功能"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">所属模块</label>
+                        <select class="form-select" id="apiModule">
+                            <option value="template">模板管理</option>
+                            <option value="datasource">数据源管理</option>
+                            <option value="user">用户管理</option>
+                            <option value="auth">认证</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">认证方式</label>
+                        <select class="form-select" id="apiAuth">
+                            <option value="public">公开</option>
+                            <option value="required">需要认证</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createApiModal')">取消</button>
+                <button class="btn btn-primary" onclick="createApi()">创建接口</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 测试API模态框 -->
+    <div class="modal-overlay" id="testApiModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">测试接口</h3>
+                <button class="modal-close" onclick="closeModal('testApiModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">请求方法</label>
+                        <select class="form-select" id="testMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">接口路径</label>
+                        <input type="text" class="form-input" id="testUrl">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="runTest()">🚀 发送请求</button>
+                <div class="test-result" id="testResult">
+                    <pre id="testResultContent"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('testApiModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script>
+        // 下拉菜单
+        function toggleDropdown(menuId) {
+            const menu = document.getElementById(menuId);
+            menu.classList.toggle('show');
+            event.stopPropagation();
+        }
+        
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        });
+        
+        // 筛选功能
+        function filterApis() {
+            const methodFilter = document.getElementById('methodFilter').value;
+            const moduleFilter = document.getElementById('moduleFilter').value;
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            
+            let visibleCount = 0;
+            
+            document.querySelectorAll('.api-card').forEach(card => {
+                const method = card.dataset.method;
+                const module = card.dataset.module;
+                const name = card.querySelector('.api-name').textContent.toLowerCase();
+                const url = card.querySelector('.api-url').textContent.toLowerCase();
+                
+                const matchMethod = !methodFilter || method === methodFilter;
+                const matchModule = !moduleFilter || module === moduleFilter;
+                const matchSearch = !searchText || name.includes(searchText) || url.includes(searchText);
+                
+                if (matchMethod && matchModule && matchSearch) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            const emptyState = document.getElementById('emptyState');
+            const paginationInfo = document.getElementById('paginationInfo');
+            
+            if (visibleCount === 0) {
+                emptyState.classList.add('show');
+                paginationInfo.textContent = '共 0 个接口';
+            } else {
+                emptyState.classList.remove('show');
+                paginationInfo.textContent = `共 ${visibleCount} 个接口`;
+            }
+        }
+        
+        // 模态框
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('show');
+            });
+        });
+        
+        // 新建接口
+        function createApi() {
+            const name = document.getElementById('apiName').value;
+            const method = document.getElementById('apiMethod').value;
+            const path = document.getElementById('apiPath').value;
+            const desc = document.getElementById('apiDesc').value;
+            const module = document.getElementById('apiModule').value;
+            
+            if (!name || !path) {
+                showToast('请填写必填字段', 'error');
+                return;
+            }
+            
+            const apiList = document.getElementById('apiList');
+            const newApi = document.createElement('div');
+            newApi.className = 'api-card';
+            newApi.dataset.method = method.toLowerCase();
+            newApi.dataset.module = module;
+            newApi.innerHTML = `
+                <div class="api-header">
+                    <div class="api-info">
+                        <div class="api-name">
+                            ${name}
+                            <span class="method-badge ${method.toLowerCase()}">${method}</span>
+                        </div>
+                        <div class="api-desc">${desc || '暂无描述'}</div>
+                        <div class="api-path">
+                            <span class="api-url">${path}</span>
+                        </div>
+                    </div>
+                    <div class="api-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
+                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
+                    </div>
+                </div>
+                <div class="api-stats">
+                    <div class="api-stat"><div class="api-stat-value">0</div><div class="api-stat-label">调用次数</div></div>
+                    <div class="api-stat"><div class="api-stat-value">-</div><div class="api-stat-label">Avg响应</div></div>
+                    <div class="api-stat"><div class="api-stat-value">-</div><div class="api-stat-label">成功率</div></div>
+                    <div class="api-stat"><div class="api-stat-value">从未</div><div class="api-stat-label">最后调用</div></div>
+                </div>
+            `;
+            apiList.insertBefore(newApi, apiList.firstChild);
+            
+            // 清空表单
+            document.getElementById('apiName').value = '';
+            document.getElementById('apiPath').value = '';
+            document.getElementById('apiDesc').value = '';
+            
+            closeModal('createApiModal');
+            showToast('接口创建成功');
+            filterApis();
+        }
+        
+        // 测试API
+        function testApi(btn) {
+            const card = btn.closest('.api-card');
+            const method = card.dataset.method;
+            const url = card.querySelector('.api-url').textContent;
+            
+            document.getElementById('testMethod').value = method.toUpperCase();
+            document.getElementById('testUrl').value = url;
+            document.getElementById('testResult').classList.remove('show');
+            
+            openModal('testApiModal');
+        }
+        
+        // 编辑API
+        function editApi(btn) {
+            const card = btn.closest('.api-card');
+            const name = card.querySelector('.api-name').childNodes[0].textContent.trim();
+            showToast(`编辑接口: ${name}`);
+        }
+        
+        // 运行测试
+        function runTest() {
+            const result = document.getElementById('testResult');
+            const content = document.getElementById('testResultContent');
+            
+            result.className = 'test-result show';
+            content.textContent = '⏳ 正在发送请求...';
+            
+            setTimeout(() => {
+                const success = Math.random() > 0.2;
+                if (success) {
+                    result.className = 'test-result show success';
+                    content.textContent = JSON.stringify({ code: 200, message: "success", data: {} }, null, 2);
+                } else {
+                    result.className = 'test-result show error';
+                    content.textContent = JSON.stringify({ code: 500, error: "Internal Server Error" }, null, 2);
+                }
+            }, 1000);
+        }
+        
+        // Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'error') toast.style.borderLeftColor = 'var(--danger)';
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

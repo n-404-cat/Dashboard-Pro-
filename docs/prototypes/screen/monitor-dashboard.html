@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统监控大屏 - Dashboard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --cyan: #00D4FF; --green: #00E676; --red: #FF5252; --orange: #FFAB40; --purple: #B388FF; --blue: #448AFF; }
+        body { font-family: "SF Pro Display", "PingFang SC", sans-serif; background: #0D1117; color: white; overflow: hidden; height: 100vh; }
+        
+        .screen { width: 100vw; height: 100vh; background: radial-gradient(ellipse at top, #1a1a2e 0%, #0D1117 50%, #0a0e17 100%); padding: 16px; display: flex; flex-direction: column; position: relative; }
+        .screen::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(180deg, rgba(0,212,255,0.03) 0%, transparent 50%); pointer-events: none; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(0,230,118,0.2); border-radius: 10px; margin-bottom: 12px; position: relative; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--green) 0%, var(--cyan) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .title { font-size: 20px; font-weight: 500; letter-spacing: 1px; background: linear-gradient(90deg, #fff, var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .status-pill { display: flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(0,230,118,0.15); border: 1px solid rgba(0,230,118,0.3); border-radius: 20px; font-size: 12px; color: var(--green); }
+        .status-pill::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .time { font-size: 24px; font-family: "SF Mono", monospace; color: var(--green); }
+        .date { font-size: 11px; color: rgba(255,255,255,0.5); }
+        
+        .main-content { flex: 1; display: grid; grid-template-columns: 280px 1fr 240px; gap: 12px; position: relative; z-index: 10; }
+        .column { display: flex; flex-direction: column; gap: 12px; }
+        
+        .card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; backdrop-filter: blur(10px); }
+        .card-title { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .card-title::before { content: ''; width: 3px; height: 12px; background: var(--green); border-radius: 2px; }
+        
+        /* 服务器状态 */
+        .server-list { display: flex; flex-direction: column; gap: 8px; }
+        .server-item { padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border-left: 3px solid var(--green); }
+        .server-item.warning { border-left-color: var(--orange); }
+        .server-item.error { border-left-color: var(--red); }
+        .server-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .server-name { font-size: 13px; font-weight: 500; }
+        .server-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+        .server-status.ok { background: rgba(0,230,118,0.15); color: var(--green); }
+        .server-status.warn { background: rgba(255,171,64,0.15); color: var(--orange); }
+        .server-status.crit { background: rgba(255,82,82,0.15); color: var(--red); }
+        .server-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .metric { display: flex; flex-direction: column; gap: 2px; }
+        .metric-label { font-size: 10px; color: rgba(255,255,255,0.4); }
+        .metric-value { font-size: 14px; font-weight: 600; font-family: "SF Mono", monospace; }
+        
+        /* CPU图表 */
+        .cpu-chart { height: 100px; display: flex; align-items: flex-end; gap: 3px; padding: 10px 0; }
+        .cpu-bar { flex: 1; background: linear-gradient(180deg, var(--green) 0%, rgba(0,230,118,0.3) 100%); border-radius: 2px 2px 0 0; animation: cpuPulse 2s infinite; }
+        @keyframes cpuPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        
+        /* 中间 */
+        .center-panel { display: flex; flex-direction: column; gap: 12px; }
+        
+        .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+        .metric-card { background: linear-gradient(135deg, rgba(0,230,118,0.08) 0%, rgba(0,212,255,0.05) 100%); border: 1px solid rgba(0,230,118,0.15); border-radius: 10px; padding: 14px 10px; text-align: center; }
+        .metric-icon { font-size: 22px; margin-bottom: 6px; }
+        .metric-num { font-size: 24px; font-weight: 700; font-family: "SF Mono", monospace; }
+        .metric-num.green { color: var(--green); }
+        .metric-num.cyan { color: var(--cyan); }
+        .metric-num.orange { color: var(--orange); }
+        .metric-num.purple { color: var(--purple); }
+        .metric-num.blue { color: var(--blue); }
+        .metric-num.red { color: var(--red); }
+        .metric-name { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+        
+        .main-chart { flex: 1; min-height: 300px; }
+        .chart-area { height: 100%; display: flex; position: relative; padding: 20px; }
+        .chart-lines { position: absolute; top: 20px; left: 20px; right: 20px; bottom: 50px; }
+        .chart-line { position: absolute; height: 100%; width: 100%; }
+        .chart-grid { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .grid-line { height: 1px; background: rgba(255,255,255,0.05); position: relative; }
+        .grid-line::before { content: attr(data-value); position: absolute; left: -30px; top: -6px; font-size: 10px; color: rgba(255,255,255,0.3); }
+        
+        .chart-path { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        .chart-path svg { width: 100%; height: 100%; }
+        
+        .chart-labels { display: flex; justify-content: space-between; padding: 0 20px; font-size: 10px; color: rgba(255,255,255,0.4); }
+        
+        /* 警告列表 */
+        .alert-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+        .alert-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .alert-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .alert-icon.critical { background: rgba(255,82,82,0.2); }
+        .alert-icon.warning { background: rgba(255,171,64,0.2); }
+        .alert-icon.info { background: rgba(68,138,255,0.2); }
+        .alert-content { flex: 1; }
+        .alert-title { font-size: 12px; color: rgba(255,255,255,0.8); }
+        .alert-time { font-size: 10px; color: rgba(255,255,255,0.4); }
+        
+        /* 右侧 */
+        .right-panel { display: flex; flex-direction: column; gap: 12px; }
+        
+        .gauge-container { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
+        .gauge { width: 120px; height: 60px; position: relative; }
+        .gauge-bg { width: 120px; height: 60px; border-radius: 60px 60px 0 0; background: rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+        .gauge-fill { position: absolute; bottom: 0; left: 0; width: 120px; height: 60px; border-radius: 60px 60px 0 0; background: conic-gradient(from 180deg, var(--green) 0deg, var(--green) var(--value, 108deg), transparent var(--value, 108deg)); transform-origin: bottom center; }
+        .gauge-cover { position: absolute; bottom: 0; left: 10px; width: 100px; height: 50px; background: #0D1117; border-radius: 50px 50px 0 0; }
+        .gauge-value { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: 700; font-family: "SF Mono", monospace; color: var(--green); }
+        .gauge-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 8px; }
+        
+        /* 服务健康 */
+        .service-list { display: flex; flex-direction: column; gap: 8px; }
+        .service-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; }
+        .service-icon { font-size: 18px; }
+        .service-name { flex: 1; font-size: 12px; }
+        .service-status { width: 8px; height: 8px; border-radius: 50%; }
+        .service-status.up { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .service-status.down { background: var(--red); box-shadow: 0 0 8px var(--red); }
+        
+        /* 底部 */
+        .footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; margin-top: 12px; position: relative; z-index: 10; }
+        .footer-left { display: flex; gap: 20px; font-size: 11px; color: rgba(255,255,255,0.4); }
+        .footer-item { display: flex; align-items: center; gap: 6px; }
+        .footer-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .footer-dot.green { background: var(--green); }
+        .footer-right { font-size: 11px; color: rgba(255,255,255,0.3); }
+        
+        @media (max-width: 1200px) { .main-content { grid-template-columns: 1fr; } .metrics-grid { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="screen">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo"><div class="logo-icon">🖥️</div><span class="title">系统监控中心</span></div>
+                <div class="status-pill">系统运行正常</div>
+            </div>
+            <div class="header-right">
+                <div>
+                    <div class="time" id="currentTime">14:35:28</div>
+                    <div class="date" id="currentDate">2024-01-15</div>
+                </div>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="column">
+                <div class="card">
+                    <div class="card-title">服务器状态</div>
+                    <div class="server-list">
+                        <div class="server-item">
+                            <div class="server-header"><span class="server-name">Web Server #1</span><span class="server-status ok">正常</span></div>
+                            <div class="server-metrics">
+                                <div class="metric"><span class="metric-label">CPU</span><span class="metric-value" style="color: var(--green);">23%</span></div>
+                                <div class="metric"><span class="metric-label">内存</span><span class="metric-value" style="color: var(--cyan);">45%</span></div>
+                            </div>
+                        </div>
+                        <div class="server-item">
+                            <div class="server-header"><span class="server-name">Web Server #2</span><span class="server-status ok">正常</span></div>
+                            <div class="server-metrics">
+                                <div class="metric"><span class="metric-label">CPU</span><span class="metric-value" style="color: var(--green);">31%</span></div>
+                                <div class="metric"><span class="metric-label">内存</span><span class="metric-value" style="color: var(--yellow);">62%</span></div>
+                            </div>
+                        </div>
+                        <div class="server-item warning">
+                            <div class="server-header"><span class="server-name">DB Server #1</span><span class="server-status warn">警告</span></div>
+                            <div class="server-metrics">
+                                <div class="metric"><span class="metric-label">CPU</span><span class="metric-value" style="color: var(--orange);">78%</span></div>
+                                <div class="metric"><span class="metric-label">内存</span><span class="metric-value" style="color: var(--red);">89%</span></div>
+                            </div>
+                        </div>
+                        <div class="server-item">
+                            <div class="server-header"><span class="server-name">DB Server #2</span><span class="server-status ok">正常</span></div>
+                            <div class="server-metrics">
+                                <div class="metric"><span class="metric-label">CPU</span><span class="metric-value" style="color: var(--green);">18%</span></div>
+                                <div class="metric"><span class="metric-label">内存</span><span class="metric-value" style="color: var(--cyan);">42%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">CPU 使用率分布</div>
+                    <div class="cpu-chart" id="cpuChart"></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">网络流量</div>
+                    <div class="server-metrics">
+                        <div class="metric"><span class="metric-label">入站</span><span class="metric-value" style="color: var(--cyan);">125 MB/s</span></div>
+                        <div class="metric"><span class="metric-label">出站</span><span class="metric-value" style="color: var(--green);">86 MB/s</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="center-panel">
+                <div class="metrics-grid">
+                    <div class="metric-card"><div class="metric-icon">🖥️</div><div class="metric-num green">99.9%</div><div class="metric-name">可用率</div></div>
+                    <div class="metric-card"><div class="metric-icon">⚡</div><div class="metric-num cyan">12ms</div><div class="metric-name">Avg延迟</div></div>
+                    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-num orange">2.4K</div><div class="metric-name">QPS</div></div>
+                    <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-num purple">8,432</div><div class="metric-name">在线用户</div></div>
+                    <div class="metric-card"><div class="metric-icon">📦</div><div class="metric-num blue">156K</div><div class="metric-name">请求/分</div></div>
+                    <div class="metric-card"><div class="metric-icon">❌</div><div class="metric-num red">0.02%</div><div class="metric-name">错误率</div></div>
+                </div>
+                
+                <div class="card main-chart">
+                    <div class="card-title">系统性能趋势</div>
+                    <div class="chart-area">
+                        <div class="chart-lines">
+                            <div class="chart-grid">
+                                <div class="grid-line" data-value="100%"></div>
+                                <div class="grid-line" data-value="75%"></div>
+                                <div class="grid-line" data-value="50%"></div>
+                                <div class="grid-line" data-value="25%"></div>
+                                <div class="grid-line" data-value="0%"></div>
+                            </div>
+                            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style="stop-color:rgba(0,230,118,0.3);stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:rgba(0,230,118,0);stop-opacity:0" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M0,80 L15,75 L30,70 L45,55 L60,45 L75,35 L90,25 L100,20 L100,100 L0,100 Z" fill="url(#grad1)" />
+                                <path d="M0,80 L15,75 L30,70 L45,55 L60,45 L75,35 L90,25 L100,20" fill="none" stroke="#00E676" stroke-width="0.5" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="chart-labels">
+                        <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">实时告警</div>
+                    <div class="alert-list">
+                        <div class="alert-item">
+                            <div class="alert-icon critical">🚨</div>
+                            <div class="alert-content">
+                                <div class="alert-title">DB Server #1 内存使用率超过 85%</div>
+                                <div class="alert-time">2分钟前</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-icon warning">⚠️</div>
+                            <div class="alert-content">
+                                <div class="alert-title">Web Server #2 CPU 使用率偏高</div>
+                                <div class="alert-time">5分钟前</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-icon info">ℹ️</div>
+                            <div class="alert-content">
+                                <div class="alert-title">自动扩缩容触发，新增 2 台服务器</div>
+                                <div class="alert-time">15分钟前</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-icon info">ℹ️</div>
+                            <div class="alert-content">
+                                <div class="alert-title">数据库备份完成</div>
+                                <div class="alert-time">1小时前</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="column right-panel">
+                <div class="card">
+                    <div class="card-title">系统负载</div>
+                    <div class="gauge-container">
+                        <div class="gauge">
+                            <div class="gauge-bg"><div class="gauge-fill" style="--value: 72deg;"></div><div class="gauge-cover"></div></div>
+                            <div class="gauge-value">40%</div>
+                        </div>
+                        <div class="gauge-label">CPU 负载</div>
+                    </div>
+                    <div class="gauge-container" style="margin-top: 20px;">
+                        <div class="gauge">
+                            <div class="gauge-bg"><div class="gauge-fill" style="--value: 126deg; background: conic-gradient(from 180deg, var(--cyan) 0deg, var(--cyan) 126deg, transparent 126deg);"></div><div class="gauge-cover"></div></div>
+                            <div class="gauge-value" style="color: var(--cyan);">70%</div>
+                        </div>
+                        <div class="gauge-label">内存使用</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">服务健康状态</div>
+                    <div class="service-list">
+                        <div class="service-item"><span class="service-icon">🌐</span><span class="service-name">API Gateway</span><span class="service-status up"></span></div>
+                        <div class="service-item"><span class="service-icon">🗄️</span><span class="service-name">Database</span><span class="service-status up"></span></div>
+                        <div class="service-item"><span class="service-icon">🔴</span><span class="service-name">Redis Cache</span><span class="service-status up"></span></div>
+                        <div class="service-item"><span class="service-icon">📧</span><span class="service-name">Email Service</span><span class="service-status up"></span></div>
+                        <div class="service-item"><span class="service-icon">🔍</span><span class="service-name">Search</span><span class="service-status up"></span></div>
+                        <div class="service-item"><span class="service-icon">📦</span><span class="service-name">CDN</span><span class="service-status up"></span></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">磁盘使用</div>
+                    <div class="progress-list" style="gap: 8px;">
+                        <div class="service-item" style="flex-direction: column; align-items: flex-start;">
+                            <div style="display: flex; justify-content: space-content: space-between; width: 100%; margin-bottom: 4px;">
+                                <span style="font-size: 11px;">/dev/sda1</span>
+                                <span style="font-size: 11px; color: var(--green);">76%</span>
+                            </div>
+                            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
+                                <div style="width: 76%; height: 100%; background: var(--green); border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                        <div class="service-item" style="flex-direction: column; align-items: flex-start;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;">
+                                <span style="font-size: 11px;">/dev/sda2</span>
+                                <span style="font-size: 11px; color: var(--orange);">45%</span>
+                            </div>
+                            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
+                                <div style="width: 45%; height: 100%; background: var(--orange); border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <div class="footer-left">
+                <div class="footer-item"><span class="footer-dot green"></span>服务器: 4/4 在线</div>
+                <div class="footer-item"><span class="footer-dot green"></span>服务: 12/12 正常</div>
+                <div class="footer-item"><span class="footer-dot green"></span>数据库: 2/2 正常</div>
+            </div>
+            <div class="footer-right">数据刷新: 3秒 | © 2024 Dashboard Pro</div>
+        </footer>
+    </div>
+    
+    <script>
+        // 生成CPU图表
+        const cpuChart = document.getElementById('cpuChart');
+        for (let i = 0; i < 40; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'cpu-bar';
+            bar.style.height = Math.random() * 60 + 20 + '%';
+            bar.style.animationDelay = i * 0.05 + 's';
+            cpuChart.appendChild(bar);
+        }
+        
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toTimeString().slice(0,8);
+            document.getElementById('currentDate').textContent = now.toISOString().slice(0,10);
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

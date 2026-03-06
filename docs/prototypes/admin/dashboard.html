@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制台 - 数据大屏管理系统</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 16px; transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card:nth-child(1)::before { background: var(--primary-lighter); }
+        .stat-card:nth-child(2)::before { background: var(--success); }
+        .stat-card:nth-child(3)::before { background: var(--warning); }
+        .stat-card:nth-child(4)::before { background: var(--info); }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .stat-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+        .stat-icon.blue { background: rgba(74,144,217,0.12); color: var(--primary-lighter); }
+        .stat-icon.green { background: rgba(40,167,69,0.12); color: var(--success); }
+        .stat-icon.orange { background: rgba(255,193,7,0.12); color: #B8860B; }
+        .stat-icon.purple { background: rgba(23,162,184,0.12); color: var(--info); }
+        .stat-content { flex: 1; }
+        .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-value { font-size: 28px; font-weight: 600; color: var(--text-dark); font-family: "SF Mono", monospace; }
+        .stat-trend { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-top: 6px; }
+        .stat-trend.up { color: var(--success); }
+        .stat-trend.down { color: var(--danger); }
+        
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); overflow: hidden; }
+        .card-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 16px; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+        .card-title .icon { font-size: 18px; }
+        .card-more { font-size: 13px; color: var(--primary-lighter); text-decoration: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .card-more:hover { gap: 8px; }
+        .card-body { padding: 16px 20px; }
+        
+        .activity-list { display: flex; flex-direction: column; }
+        .activity-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); transition: background 0.2s; cursor: pointer; }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-item:hover { background: var(--bg-light); margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+        .activity-avatar { width: 40px; height: 40px; border-radius: 10px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .activity-content { flex: 1; min-width: 0; }
+        .activity-text { font-size: 14px; color: var(--text-body); line-height: 1.5; }
+        .activity-text strong { color: var(--text-dark); font-weight: 500; }
+        .activity-text .highlight { color: var(--primary-lighter); }
+        .activity-time { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .activity-tag { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 4px; margin-left: 8px; }
+        .activity-tag.create { background: rgba(40,167,69,0.1); color: var(--success); }
+        .activity-tag.update { background: rgba(74,144,217,0.1); color: var(--primary-lighter); }
+        .activity-tag.delete { background: rgba(220,53,69,0.1); color: var(--danger); }
+        
+        .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .quick-action { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 16px; background: var(--bg-light); border-radius: 12px; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .quick-action:hover { background: white; border-color: var(--primary-lighter); transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .quick-action-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: all 0.3s; }
+        .quick-action:hover .quick-action-icon { transform: scale(1.1) rotate(5deg); }
+        .quick-action:nth-child(2) .quick-action-icon { background: var(--success); }
+        .quick-action:nth-child(3) .quick-action-icon { background: var(--info); }
+        .quick-action:nth-child(4) .quick-action-icon { background: #6C757D; }
+        .quick-action-label { font-size: 13px; font-weight: 500; color: var(--text-body); }
+        
+        .template-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .template-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .template-card:hover { transform: translateY(-6px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); border-color: var(--primary-lighter); }
+        .template-thumb { height: 140px; position: relative; overflow: hidden; }
+        .template-thumb-bg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 48px; transition: transform 0.3s; }
+        .template-card:hover .template-thumb-bg { transform: scale(1.05); }
+        .template-thumb-bg.blue { background: linear-gradient(135deg, #1E3A5F 0%, #2E5C8A 100%); }
+        .template-thumb-bg.green { background: linear-gradient(135deg, #28A745 0%, #20C997 100%); }
+        .template-thumb-bg.purple { background: linear-gradient(135deg, #6F42C1 0%, #E83E8C 100%); }
+        .template-thumb-bg.orange { background: linear-gradient(135deg, #FD7E14 0%, #FFC107 100%); }
+        .template-badge { position: absolute; top: : 10px; padding: 4px 1010px; rightpx; background: rgba(0,0,0,0.6); color: white; font-size: 11px; border-radius: 20px; backdrop-filter: blur(4px); }
+        .template-badge.published { background: rgba(40,167,69,0.9); }
+        .template-badge.draft { background: rgba(255,193,7,0.9); color: #333; }
+        .template-badge.error { background: rgba(220,53,69,0.9); }
+        .template-info { padding: 14px; }
+        .template-name { font-size: 14px; font-weight: 500; color: var(--text-dark); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .template-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); }
+        .template-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; }
+        .template-card:hover .template-actions { opacity: 1; }
+        .template-action { width: 28px; height: 28px; border-radius: 6px; border: none; background: var(--bg-light); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .template-action:hover { background: var(--primary-lighter); color: white; }
+        .template-action.danger:hover { background: var(--danger); }
+        
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 18px; font-weight: 600; color: var(--text-dark); }
+        .section-tabs { display: flex; gap: 4px; background: var(--bg-light); padding: 4px; border-radius: 8px; }
+        .section-tab { padding: 8px 16px; font-size: 13px; color: var(--text-body); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .section-tab:hover { color: var(--primary); }
+        .section-tab.active { background: white; color: var(--primary); font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-card, .card, .template-card { animation: fadeIn 0.4s ease; }
+    </style>
+</head>
+<body>
+    <!-- 引入布局脚本 -->
+    <script src="layout.js"></script>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title-group">
+                <h1 class="page-title">数据概览</h1>
+                <div class="breadcrumb">
+                    <span>控制台</span>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary">📤 导出数据</button>
+                <button class="btn btn-primary" onclick="window.location.href='templates.html'">➕ 新建模板</button>
+            </div>
+        </div>
+        
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">📊</div>
+                <div class="stat-content">
+                    <div class="stat-label">模板总数</div>
+                    <div class="stat-value">128</div>
+                    <div class="stat-trend up">↑ 12% 较上月</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">🗄️</div>
+                <div class="stat-content">
+                    <div class="stat-label">数据源</div>
+                    <div class="stat-value">45</div>
+                    <div class="stat-trend up">↑ 8% 较上月</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">👁️</div>
+                <div class="stat-content">
+                    <div class="stat-label">本月访问</div>
+                    <div class="stat-value">24.5K</div>
+                    <div class="stat-trend down">↓ 3% 较上月</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">⏱️</div>
+                <div class="stat-content">
+                    <div class="stat-label">Avg响应时间</div>
+                    <div class="stat-value">156ms</div>
+                    <div class="stat-trend up">↑ 5% 较上月</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 内容区 -->
+        <div class="content-grid">
+            <!-- 最近操作 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">📝</span>最近操作</span>
+                    <a class="card-more">查看全部 →</a>
+                </div>
+                <div class="card-body">
+                    <div class="activity-list">
+                        <div class="activity-item">
+                            <div class="activity-avatar">A</div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>管理员</strong> 创建了新模板 <span class="highlight">销售数据大屏</span>
+                                    <span class="activity-tag create">创建</span>
+                                </div>
+                                <div class="activity-time">2分钟前</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: rgba(40,167,69,0.15); color: var(--success);">✓</div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>管理员</strong> 配置了数据源 <span class="highlight">MySQL生产库</span>
+                                    <span class="activity-tag update">更新</span>
+                                </div>
+                                <div class="activity-time">15分钟前</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: rgba(74,144,217,0.15); color: var(--primary-lighter);">✎</div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>管理员</strong> 更新了模板 <span class="highlight">实时监控看板</span>
+                                    <span class="activity-tag update">更新</span>
+                                </div>
+                                <div class="activity-time">1小时前</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-avatar" style="background: rgba(220,53,69,0.15); color: var(--danger);">🗑</div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>管理员</strong> 删除了模板 <span class="highlight">测试大屏V1</span>
+                                    <span class="activity-tag delete">删除</span>
+                                </div>
+                                <div class="activity-time">3小时前</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快捷操作 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">⚡</span>快捷操作</span>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="window.location.href='templates.html'">
+                            <div class="quick-action-icon">➕</div>
+                            <span class="quick-action-label">新建模板</span>
+                        </div>
+                        <div class="quick-action" onclick="window.location.href='datasources.html'">
+                            <div class="quick-action-icon">🔗</div>
+                            <span class="quick-action-label">添加数据源</span>
+                        </div>
+                        <div class="quick-action" onclick="window.location.href='apis.html'">
+                            <div class="quick-action-icon">📋</div>
+                            <span class="quick-action-label">接口配置</span>
+                        </div>
+                        <div class="quick-action">
+                            <div class="quick-action-icon">📥</div>
+                            <span class="quick-action-label">导入模板</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 模板列表 -->
+        <div class="section-header">
+            <h2 class="section-title">我的模板</h2>
+            <div class="section-tabs">
+                <div class="section-tab active">全部</div>
+                <div class="section-tab">已发布</div>
+                <div class="section-tab">草稿</div>
+                <div class="section-tab">异常</div>
+            </div>
+        </div>
+        
+        <div class="template-grid">
+            <div class="template-card" onclick="window.location.href='editor.html'">
+                <div class="template-thumb">
+                    <div class="template-thumb-bg blue">📊</div>
+                    <span class="template-badge published">已发布</span>
+                </div>
+                <div class="template-info">
+                    <div class="template-name">销售数据大屏</div>
+                    <div class="template-meta">
+                        <span>零售行业</span>
+                        <div class="template-actions">
+                            <button class="template-action" title="预览">👁️</button>
+                            <button class="template-action" title="编辑">✎</button>
+                            <button class="template-action danger" title="删除">🗑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-card">
+                <div class="template-thumb">
+                    <div class="template-thumb-bg green">📈</div>
+                    <span class="template-badge published">已发布</span>
+                </div>
+                <div class="template-info">
+                    <div class="template-name">实时监控看板</div>
+                    <div class="template-meta">
+                        <span>运维监控</span>
+                        <div class="template-actions">
+                            <button class="template-action" title="预览">👁️</button>
+                            <button class="template-action" title="编辑">✎</button>
+                            <button class="template-action danger" title="删除">🗑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-card">
+                <div class="template-thumb">
+                    <div class="template-thumb-bg purple">💰</div>
+                    <span class="template-badge draft">草稿</span>
+                </div>
+                <div class="template-info">
+                    <div class="template-name">财务分析报告</div>
+                    <div class="template-meta">
+                        <span>金融行业</span>
+                        <div class="template-actions">
+                            <button class="template-action" title="预览">👁️</button>
+                            <button class="template-action" title="编辑">✎</button>
+                            <button class="template-action danger" title="删除">🗑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="template-card">
+                <div class="template-thumb">
+                    <div class="template-thumb-bg orange">👥</div>
+                    <span class="template-badge error">异常</span>
+                </div>
+                <div class="template-info">
+                    <div class="template-name">用户行为分析</div>
+                    <div class="template-meta">
+                        <span>互联网</span>
+                        <div class="template-actions">
+                            <button class="template-action" title="预览">👁️</button>
+                            <button class="template-action" title="编辑">✎</button>
+                            <button class="template-action danger" title="删除">🗑</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 脚本 -->
+    <script>
+        // 模拟数据交互逻辑
+        document.querySelectorAll('.activity-item').forEach(item => {
+            item.addEventListener('click', () => {
+                alert('点击了动态详情');
+            });
+        });
+        
+        // Tab切换
+        const sectionTabs = document.querySelectorAll('.section-tab');
+        sectionTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                sectionTabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

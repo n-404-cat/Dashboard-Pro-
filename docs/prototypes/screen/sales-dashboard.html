@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售数据大屏 - Dashboard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --cyan: #00D4FF; --coral: #FF6B6B; --mint: #4ECDC4; --yellow: #FFE66D;
+            --purple: #AA96DA; --pink: #FCBAD3; --blue: #4A90D9;
+        }
+        body { font-family: "PingFang SC", "SF Pro Display", sans-serif; background: #0A0E27; color: white; overflow: hidden; height: 100vh; }
+        
+        .screen { width: 100vw; height: 100vh; background: linear-gradient(135deg, #0A0E27 0%, #141B3A 50%, #0D1225 100%); padding: 16px; display: flex; flex-direction: column; position: relative; }
+        .screen::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 15% 85%, rgba(0,212,255,0.08) 0%, transparent 40%), radial-gradient(circle at 85% 15%, rgba(74,144,217,0.08) 0%, transparent 40%); pointer-events: none; }
+        
+        /* 顶部标题栏 */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 12px; position: relative; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .logo { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .title { font-size: 22px; font-weight: 500; letter-spacing: 2px; background: linear-gradient(90deg, #fff, var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .header-right { display: flex; align-items: center; gap: 30px; }
+        .weather { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 14px; }
+        .datetime { text-align: right; }
+        .time { font-size: 28px; font-weight: 300; font-family: "SF Mono", monospace; color: var(--cyan); }
+        .date { font-size: 12px; color: rgba(255,255,255,0.5); }
+        
+        /* 主内容区 */
+        .main-content { flex: 1; display: grid; grid-template-columns: 260px 1fr 260px; gap: 12px; position: relative; z-index: 10; }
+        .column { display: flex; flex-direction: column; gap: 12px; }
+        
+        .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; backdrop-filter: blur(10px); transition: all 0.3s; }
+        .card:hover { background: rgba(255,255,255,0.05); border-color: rgba(0,212,255,0.3); box-shadow: 0 0 20px rgba(0,212,255,0.1); }
+        .card-title { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .card-title::before { content: ''; width: 3px; height: 12px; background: var(--cyan); border-radius: 2px; }
+        
+        /* 统计卡片 */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-item { text-align: center; padding: 12px 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-value { font-size: 26px; font-weight: 600; font-family: "SF Mono", monospace; }
+        .stat-value.cyan { color: var(--cyan); }
+        .stat-value.yellow { color: var(--yellow); }
+        .stat-value.coral { color: var(--coral); }
+        .stat-value.mint { color: var(--mint); }
+        .stat-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+        
+        /* 柱状图 */
+        .bar-chart { height: 160px; display: flex; align-items: flex-end; justify-content: space-around; padding: 20px 10px 10px; position: relative; }
+        .bar-chart::before { content: ''; position: absolute; bottom: 30px; left: 10px; right: 10px; height: 1px; background: rgba(255,255,255,0.1); }
+        .bar { width: 24px; background: linear-gradient(180deg, var(--cyan) 0%, rgba(0,212,255,0.3) 100%); border-radius: 4px 4px 0 0; animation: growUp 1s ease-out forwards; transform-origin: bottom; }
+        @keyframes growUp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+        .bar-label { position: absolute; bottom: 8px; font-size: 10px; color: rgba(255,255,255,0.5); }
+        
+        /* 排行榜 */
+        .rank-list { display: flex; flex-direction: column; gap: 6px; }
+        .rank-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(0,0,0,0.2); border-radius: 6px; transition: all 0.2s; }
+        .rank-item:hover { background: rgba(0,212,255,0.1); }
+        .rank-num { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .rank-num.top3 { background: linear-gradient(135deg, var(--yellow) 0%, var(--coral) 100%); color: #333; }
+        .rank-num.normal { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
+        .rank-name { flex: 1; font-size: 12px; color: rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-value { font-size: 13px; font-weight: 500; color: var(--cyan); }
+        
+        /* 中间区域 */
+        .center-panel { display: flex; flex-direction: column; gap: 12px; }
+        
+        .center-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .center-stat { background: linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(74,144,217,0.08) 100%); border: 1px solid rgba(0,212,255,0.2); border-radius: 10px; padding: 14px; text-align: center; }
+        .center-stat-icon { font-size: 22px; margin-bottom: 6px; }
+        .center-stat-value { font-size: 28px; font-weight: 600; font-family: "SF Mono", monospace; }
+        .center-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+        
+        .main-chart { flex: 1; min-height: 280px; }
+        .main-chart-content { height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 30px; padding: 30px 40px 50px; position: relative; }
+        .main-chart-content::before { content: ''; position: absolute; bottom: 45px; left: 40px; right: 40px; height: 1px; background: rgba(255,255,255,0.1); }
+        .chart-point { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .point-line { width: 60px; height: 80px; border-left: 2px solid rgba(0,212,255,0.3); border-bottom: 2px solid rgba(0,212,255,0.3); border-radius: 0 0 0 6px; position: relative; }
+        .point-value { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 500; color: var(--cyan); white-space: nowrap; }
+        .point-dot { width: 10px; height: 10px; background: var(--cyan); border-radius: 50%; box-shadow: 0 0 10px var(--cyan); position: relative; }
+        .point-dot::after { content: ''; position: absolute; top: 50%; left: 100%; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .point-label { font-size: 11px; color: rgba(255,255,255,0.5); }
+        
+        .bottom-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        /* 饼图 */
+        .pie-chart { height: 160px; display: flex; align-items: center; justify-content: center; }
+        .pie-visual { width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(var(--cyan) 0deg 120deg, var(--mint) 120deg 200deg, var(--yellow) 200deg 280deg, var(--coral) 280deg 360deg); position: relative; animation: rotateIn 1s ease-out; }
+        @keyframes rotateIn { from { transform: rotate(-90deg); opacity: 0; } to { transform: rotate(0deg); opacity: 1; } }
+        .pie-visual::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: #0A0E27; border-radius: 50%; }
+        .pie-legend { display: flex; flex-direction: column; gap: 6px; margin-left: 20px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+        .legend-color { width: 8px; height: 8px; border-radius: 2px; }
+        .legend-text { color: rgba(255,255,255,0.7); }
+        .legend-value { color: var(--cyan); margin-left: auto; font-weight: 500; }
+        
+        /* 进度条 */
+        .progress-list { display: flex; flex-direction: column; gap: 10px; }
+        .progress-item { display: flex; align-items: center; gap: 8px; }
+        .progress-label { width: 50px; font-size: 11px; color: rgba(255,255,255,0.7); }
+        .progress-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 3px; animation: fillProgress 1s ease-out forwards; }
+        @keyframes fillProgress { from { width: 0; } }
+        .progress-fill.blue { background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+        .progress-fill.green { background: linear-gradient(90deg, var(--mint), var(--success)); }
+        .progress-fill.yellow { background: linear-gradient(90deg, var(--yellow), var(--warning)); }
+        .progress-fill.coral { background: linear-gradient(90deg, var(--coral), var(--danger)); }
+        .progress-value { width: 35px; font-size: 11px; color: var(--cyan); text-align: right; }
+        
+        /* 地图 */
+        .map-container { flex: 1; min-height: 240px; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: hidden; }
+        .map-points { position: absolute; width: 100%; height: 100%; }
+        .map-point { position: absolute; width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; box-shadow: 0 0 10px var(--cyan); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.8); opacity: 0.4; } }
+        .map-point:nth-child(1) { top: 25%; left: 30%; animation-delay: 0s; }
+        .map-point:nth-child(2) { top: 40%; left: 55%; animation-delay: 0.3s; }
+        .map-point:nth-child(3) { top: 30%; left: 75%; animation-delay: 0.6s; }
+        .map-point:nth-child(4) { top: 55%; left: 40%; animation-delay: 0.9s; }
+        .map-point:nth-child(5) { top: 50%; left: 65%; animation-delay: 1.2s; }
+        .map-label { position: absolute; font-size: 10px; color: rgba(255,255,255,0.5); padding: 2px 6px; background: rgba(0,0,0,0.5); border-radius: 4px; }
+        
+        /* 右侧 */
+        .right-panel { display: flex; flex-direction: column; gap: 12px; }
+        .right-panel .card { flex: 1; }
+        
+        /* 底部信息栏 */
+        .footer { display: flex; justify-content: center; align-items: center; padding: 10px; margin-top: 12px; color: rgba(255,255,255,0.3); font-size: 11px; position: relative; z-index: 10; }
+        .footer span { margin: 0 12px; }
+        .marquee { flex: 1; overflow: hidden; margin: 0 16px; }
+        .marquee-content { display: flex; animation: scroll 25s linear infinite; white-space: nowrap; }
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .marquee-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 30px; }
+        .marquee-dot { width: 5px; height: 5px; background: var(--success); border-radius: 50%; }
+        
+        /* 响应式 */
+        @media (max-width: 1400px) { .main-content { grid-template-columns: 220px 1fr 220px; } }
+        @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } .center-stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="screen">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo"><div class="logo-icon">📊</div><span class="title">销售数据大屏</span></div>
+            </div>
+            <div class="header-right">
+                <div class="weather"><span>☁️</span><span>北京 22°C</span></div>
+                <div class="datetime">
+                    <div class="time" id="currentTime">14:35:28</div>
+                    <div class="date" id="currentDate">2024年1月15日 星期一</div>
+                </div>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <!-- 左侧 -->
+            <div class="column">
+                <div class="card">
+                    <div class="card-title">今日概览</div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value cyan">¥128K</div>
+                            <div class="stat-label">销售额</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value yellow">856</div>
+                            <div class="stat-label">订单数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value coral">¥150</div>
+                            <div class="stat-label">客单价</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value mint">32%</div>
+                            <div class="stat-label">转化率</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">周销售趋势</div>
+                    <div class="bar-chart">
+                        <div class="bar" style="height: 60%;"></div>
+                        <div class="bar" style="height: 80%; animation-delay: 0.1s;"></div>
+                        <div class="bar" style="height: 45%; animation-delay: 0.2s;"></div>
+                        <div class="bar" style="height: 90%; animation-delay: 0.3s;"></div>
+                        <div class="bar" style="height: 70%; animation-delay: 0.4s;"></div>
+                        <div class="bar" style="height: 55%; animation-delay: 0.5s;"></div>
+                        <div class="bar" style="height: 85%; animation-delay: 0.6s;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; padding: 0 10px; font-size: 10px; color: rgba(255,255,255,0.5);">
+                        <span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">热销商品排行</div>
+                    <div class="rank-list">
+                        <div class="rank-item"><div class="rank-num top3">1</div><div class="rank-name">iPhone 15 Pro Max</div><div class="rank-value">¥2.5M</div></div>
+                        <div class="rank-item"><div class="rank-num top3">2</div><div class="rank-name">MacBook Pro 16"</div><div class="rank-value">¥1.8M</div></div>
+                        <div class="rank-item"><div class="rank-num top3">3</div><div class="rank-name">AirPods Pro 2</div><div class="rank-value">¥980K</div></div>
+                        <div class="rank-item"><div class="rank-num normal">4</div><div class="rank-name">iPad Pro 12.9"</div><div class="rank-value">¥650K</div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 中间 -->
+            <div class="center-panel">
+                <div class="center-stats">
+                    <div class="center-stat">
+                        <div class="center-stat-icon">💰</div>
+                        <div class="center-stat-value" style="color: var(--cyan);">¥8.56M</div>
+                        <div class="center-stat-label">月度销售额</div>
+                    </div>
+                    <div class="center-stat">
+                        <div class="center-stat-icon">📦</div>
+                        <div class="center-stat-value" style="color: var(--mint);">12,458</div>
+                        <div class="center-stat-label">月度订单</div>
+                    </div>
+                    <div class="center-stat">
+                        <div class="center-stat-icon">👥</div>
+                        <div class="center-stat-value" style="color: var(--yellow);">45,230</div>
+                        <div class="center-stat-label">活跃用户</div>
+                    </div>
+                    <div class="center-stat">
+                        <div class="center-stat-icon">⭐</div>
+                        <div class="center-stat-value" style="color: var(--coral);">4.8</div>
+                        <div class="center-stat-label">用户评分</div>
+                    </div>
+                </div>
+                
+                <div class="card main-chart">
+                    <div class="card-title">实时销售监控</div>
+                    <div class="main-chart-content">
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥12K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">08:00</div>
+                        </div>
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥28K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">10:00</div>
+                        </div>
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥45K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">12:00</div>
+                        </div>
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥32K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">14:00</div>
+                        </div>
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥56K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">16:00</div>
+                        </div>
+                        <div class="chart-point">
+                            <div class="point-line"><div class="point-value">¥68K</div></div>
+                            <div class="point-dot"></div>
+                            <div class="point-label">18:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bottom-charts">
+                    <div class="card">
+                        <div class="card-title">品类销售占比</div>
+                        <div class="pie-chart">
+                            <div class="pie-visual"></div>
+                            <div class="pie-legend">
+                                <div class="legend-item"><div class="legend-color" style="background: var(--cyan);"></div><span class="legend-text">手机数码</span><span class="legend-value">33%</span></div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--mint);"></div><span class="legend-text">电脑办公</span><span class="legend-value">22%</span></div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--yellow);"></div><span class="legend-text">家用电器</span><span class="legend-value">17%</span></div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--coral);"></div><span class="legend-text">其他</span><span class="legend-value">28%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">目标完成率</div>
+                        <div class="progress-list">
+                            <div class="progress-item"><span class="progress-label">销售额</span><div class="progress-bar"><div class="progress-fill blue" style="width: 85%;"></div></div><span class="progress-value">85%</span></div>
+                            <div class="progress-item"><span class="progress-label">订单量</span><div class="progress-bar"><div class="progress-fill green" style="width: 92%;"></div></div><span class="progress-value">92%</span></div>
+                            <div class="progress-item"><span class="progress-label">新用户</span><div class="progress-bar"><div class="progress-fill yellow" style="width: 68%;"></div></div><span class="progress-value">68%</span></div>
+                            <div class="progress-item"><span class="progress-label">转化率</span><div class="progress-bar"><div class="progress-fill coral" style="width: 76%;"></div></div><span class="progress-value">76%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧 -->
+            <div class="column right-panel">
+                <div class="card">
+                    <div class="card-title">销售区域分布</div>
+                    <div class="rank-list">
+                        <div class="rank-item"><div class="rank-num top3">1</div><div class="rank-name">北京市</div><div class="rank-value">¥1.2M</div></div>
+                        <div class="rank-item"><div class="rank-num top3">2</div><div class="rank-name">上海市</div><div class="rank-value">¥980K</div></div>
+                        <div class="rank-item"><div class="rank-num top3">3</div><div class="rank-name">广州市</div><div class="rank-value">¥750K</div></div>
+                        <div class="rank-item"><div class="rank-num normal">4</div><div class="rank-name">深圳市</div><div class="rank-value">¥620K</div></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">订单实时分布</div>
+                    <div class="map-container">
+                        <div class="map-points">
+                            <div class="map-point"></div>
+                            <div class="map-point"></div>
+                            <div class="map-point"></div>
+                            <div class="map-point"></div>
+                            <div class="map-point"></div>
+                        </div>
+                        <div class="map-label" style="top: 20%; left: 25%;">华东区</div>
+                        <div class="map-label" style="top: 35%; left: 50%;">华南区</div>
+                        <div class="map-label" style="top: 25%; left: 70%;">华北区</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">销售渠道统计</div>
+                    <div class="progress-list">
+                        <div class="progress-item"><span class="progress-label">线上商城</span><div class="progress-bar"><div class="progress-fill blue" style="width: 65%;"></div></div><span class="progress-value">65%</span></div>
+                        <div class="progress-item"><span class="progress-label">线下门店</span><div class="progress-bar"><div class="progress-fill green" style="width: 45%;"></div></div><span class="progress-value">45%</span></div>
+                        <div class="progress-item"><span class="progress-label">分销商</span><div class="progress-bar"><div class="progress-fill yellow" style="width: 30%;"></div></div><span class="progress-value">30%</span></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <span>● 系统运行正常</span>
+            <div class="marquee">
+                <div class="marquee-content">
+                    <div class="marquee-item"><span class="marquee-dot"></span>实时监控中</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>数据更新频率: 5秒</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>在线用户: 1,234</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>今日订单: 856</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>销售额: ¥128,560</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>实时监控中</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>数据更新频率: 5秒</div>
+                    <div class="marquee-item"><span class="marquee-dot"></span>在线用户: 1,234</div>
+                </div>
+            </div>
+            <span>© 2024 Dashboard Pro</span>
+        </footer>
+    </div>
+    
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeEl = document.getElementById('currentTime');
+            const dateEl = document.getElementById('currentDate');
+            
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            timeEl.textContent = `${hours}:${minutes}:${seconds}`;
+            
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const weekday = weekdays[now.getDay()];
+            dateEl.textContent = `${year}年${month}月${day}日 ${weekday}`;
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

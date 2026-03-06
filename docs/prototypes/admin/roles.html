@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色权限 - 数据大屏管理系统</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .content-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+        
+        .roles-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .roles-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .roles-title { font-size: 16px; font-weight: 600; color: var(--text-dark); }
+        .role-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); cursor: pointer; transition: all 0.2s; }
+        .role-item:hover { background: var(--bg-light); }
+        .role-item.active { background: rgba(30,58,95,0.08); border-left: 3px solid var(--primary); }
+        .role-info { display: flex; flex-direction: column; gap: 4px; }
+        .role-name { font-weight: 500; color: var(--text-dark); }
+        .role-count { font-size: 12px; color: var(--text-muted); }
+        .role-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .role-badge.admin { background: rgba(220,53,69,0.1); color: var(--danger); }
+        .role-badge.custom { background: rgba(74,144,217,0.1); color: var(--primary-lighter); }
+        
+        .permissions-panel { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .permissions-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .permissions-title { font-size: 16px; font-weight: 600; color: var(--text-dark); }
+        
+        .permission-section { border-bottom: 1px solid var(--border); }
+        .permission-section:last-child { border-bottom: none; }
+        .permission-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; cursor: pointer; }
+        .permission-header:hover { background: var(--bg-light); }
+        .permission-title { display: flex; align-items: center; gap: 10px; font-weight: 500; color: var(--text-dark); }
+        .permission-title .icon { font-size: 18px; }
+        .permission-toggle { color: var(--text-muted); transition: transform 0.2s; }
+        .permission-toggle.open { transform: rotate(180deg); }
+        .permission-content { padding: 0 24px 16px; display: none; }
+        .permission-content.show { display: block; }
+        
+        .permission-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-light); }
+        .permission-item:last-child { border-bottom: none; }
+        .permission-name { font-size: 14px; color: var(--text-body); }
+        
+        .checkbox { position: relative; width: 20px; height: 20px; }
+        .checkbox input { opacity: 0; width: 0; height: 0; }
+        .checkmark { position: absolute; cursor: pointer; top: 0; left: 0; width: 20px; height: 20px; background-color: white; border: 2px solid var(--border); border-radius: 4px; transition: all 0.2s; }
+        .checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .checkbox input:checked ~ .checkmark { background-color: var(--primary); border-color: var(--primary); }
+        .checkbox input:checked ~ .checkmark:after { display: block; }
+        .checkbox.indeterminate ~ .checkmark { background-color: var(--primary); border-color: var(--primary); }
+        .checkbox.indeterminate ~ .checkmark:after { display: block; left: 6px; top: 2px; width: 5px; height: 2px; background: white; transform: rotate(0); }
+        
+        .role-description { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+        .role-description-title { font-size: 14px; font-weight: 500; color: var(--text-dark); margin-bottom: 8px; }
+        .role-description-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+        
+        @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- 引入布局脚本 -->
+    <script src="layout.js"></script>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title-group">
+                <h1 class="page-title">角色权限</h1>
+                <div class="breadcrumb"><a href="dashboard.html">首页</a><span>/</span><span>系统设置</span><span>/</span><span>角色权限</span></div>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('addRoleModal')"><span>➕</span> 新增角色</button>
+        </div>
+        
+        <div class="content-grid">
+            <div class="roles-list">
+                <div class="roles-header">
+                    <span class="roles-title">角色列表</span>
+                    <span style="font-size: 13px; color: var(--text-muted);">共 4 个角色</span>
+                </div>
+                <div class="role-item active" onclick="selectRole(this, 'admin')">
+                    <div class="role-info">
+                        <span class="role-name">超级管理员</span>
+                        <span class="role-count">1 个用户</span>
+                    </div>
+                    <span class="role-badge admin">系统</span>
+                </div>
+                <div class="role-item" onclick="selectRole(this, 'editor')">
+                    <div class="role-info">
+                        <span class="role-name">编辑者</span>
+                        <span class="role-count">3 个用户</span>
+                    </div>
+                    <span class="role-badge admin">系统</span>
+                </div>
+                <div class="role-item" onclick="selectRole(this, 'viewer')">
+                    <div class="role-info">
+                        <span class="role-name">查看者</span>
+                        <span class="role-count">2 个用户</span>
+                    </div>
+                    <span class="role-badge admin">系统</span>
+                </div>
+                <div class="role-item" onclick="selectRole(this, 'custom')">
+                    <div class="role-info">
+                        <span class="role-name">部门经理</span>
+                        <span class="role-count">2 个用户</span>
+                    </div>
+                    <span class="role-badge custom">自定义</span>
+                </div>
+            </div>
+            
+            <div class="permissions-panel">
+                <div class="permissions-header">
+                    <span class="permissions-title" id="currentRoleName">超级管理员 - 权限配置</span>
+                    <button class="btn btn-secondary" onclick="openEditRoleModal()" id="editRoleBtn" style="display: none;">✏️ 编辑角色</button>
+                </div>
+                
+                <div class="role-description" id="roleDescription">
+                    <div class="role-description-title">角色描述</div>
+                    <div class="role-description-text">超级管理员拥有系统的完全控制权，可以管理所有功能模块和用户。</div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">📋</span>
+                            <span>模板管理</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content show">
+                        <div class="permission-item">
+                            <span class="permission-name">查看模板</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">创建模板</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">编辑模板</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">删除模板</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">发布模板</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">🗄️</span>
+                            <span>数据源管理</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-item">
+                            <span class="permission-name">查看数据源</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">创建数据源</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">编辑数据源</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">删除数据源</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">测试连接</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">🔗</span>
+                            <span>接口配置</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-item">
+                            <span class="permission-name">查看接口</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">创建接口</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">编辑接口</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">删除接口</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">👥</span>
+                            <span>用户管理</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-item">
+                            <span class="permission-name">查看用户</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">创建用户</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">编辑用户</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">删除用户</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">🔐</span>
+                            <span>角色权限</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-item">
+                            <span class="permission-name">查看角色</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">创建角色</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">编辑角色</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">删除角色</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="permission-section">
+                    <div class="permission-header" onclick="togglePermission(this)">
+                        <div class="permission-title">
+                            <span class="icon">⚙️</span>
+                            <span>系统设置</span>
+                        </div>
+                        <span class="permission-toggle">▼</span>
+                    </div>
+                    <div class="permission-content">
+                        <div class="permission-item">
+                            <span class="permission-name">查看设置</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">修改设置</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">查看日志</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                        <div class="permission-item">
+                            <span class="permission-name">导出日志</span>
+                            <label class="checkbox"><input type="checkbox" checked disabled><span class="checkmark"></span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 新增角色模态框 -->
+    <div class="modal-overlay" id="addRoleModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">新增角色</h3>
+                <button class="modal-close" onclick="closeModal('addRoleModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">角色名称 *</label>
+                    <input type="text" class="form-input" id="newRoleName" placeholder="请输入角色名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">角色描述</label>
+                    <textarea class="form-textarea" id="newRoleDesc" placeholder="请输入角色描述"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addRoleModal')">取消</button>
+                <button class="btn btn-primary" onclick="addRole()">创建角色</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script>
+        let currentRole = 'admin';
+        
+        function selectRole(el, role) {
+            document.querySelectorAll('.role-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            currentRole = role;
+            
+            const roleNames = {
+                admin: '超级管理员',
+                editor: '编辑者',
+                viewer: '查看者',
+                custom: '部门经理'
+            };
+            
+            const roleDescs = {
+                admin: '超级管理员拥有系统的完全控制权，可以管理所有功能模块和用户。',
+                editor: '编辑者可以创建和编辑模板、数据源和接口，但不能管理用户或修改系统设置。',
+                viewer: '查看者只能查看和预览模板、数据源和接口，不能进行任何修改操作。',
+                custom: '部门经理拥有特定部门的部分管理权限，可以查看和编辑所属部门的内容。'
+            };
+            
+            document.getElementById('currentRoleName').textContent = roleNames[role] + ' - 权限配置';
+            document.getElementById('roleDescription').innerHTML = `
+                <div class="role-description-title">角色描述</div>
+                <div class="role-description-text">${roleDescs[role]}</div>
+            `;
+            
+            document.getElementById('editRoleBtn').style.display = role === 'admin' ? 'none' : 'block';
+            
+            updatePermissions(role);
+        }
+        
+        function updatePermissions(role) {
+            const permissions = {
+                admin: {
+                    '模板管理': [true, true, true, true, true],
+                    '数据源管理': [true, true, true, true, true],
+                    '接口配置': [true, true, true, true],
+                    '用户管理': [true, true, true, true],
+                    '角色权限': [true, true, true, true],
+                    '系统设置': [true, true, true, true]
+                },
+                editor: {
+                    '模板管理': [true, true, true, false, true],
+                    '数据源管理': [true, true, true, false, true],
+                    '接口配置': [true, true, true, false],
+                    '用户管理': [true, false, false, false],
+                    '角色权限': [true, false, false, false],
+                    '系统设置': [true, false, true, false]
+                },
+                viewer: {
+                    '模板管理': [true, false, false, false, false],
+                    '数据源管理': [true, false, false, false, false],
+                    '接口配置': [true, false, false, false],
+                    '用户管理': [true, false, false, false],
+                    '角色权限': [true, false, false, false],
+                    '系统设置': [true, false, true, false]
+                },
+                custom: {
+                    '模板管理': [true, true, true, false, false],
+                    '数据源管理': [true, true, true, false, false],
+                    '接口配置': [true, true, true, false],
+                    '用户管理': [true, false, false, false],
+                    '角色权限': [true, false, false, false],
+                    '系统设置': [true, false, true, false]
+                }
+            };
+            
+            const modules = document.querySelectorAll('.permission-section');
+            modules.forEach(module => {
+                const title = module.querySelector('.permission-title span:last-child').textContent;
+                const perms = permissions[role][title];
+                if (perms) {
+                    const checkboxes = module.querySelectorAll('.permission-item input[type="checkbox"]');
+                    checkboxes.forEach((cb, i) => {
+                        cb.checked = perms[i];
+                        cb.disabled = role === 'admin';
+                    });
+                }
+            });
+        }
+        
+        function togglePermission(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.permission-toggle');
+            content.classList.toggle('show');
+            toggle.classList.toggle('open');
+        }
+        
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('show');
+            });
+        });
+        
+        function addRole() {
+            const name = document.getElementById('newRoleName').value;
+            if (!name) {
+                showToast('请输入角色名称', 'error');
+                return;
+            }
+            
+            const list = document.querySelector('.roles-list');
+            const newRole = document.createElement('div');
+            newRole.className = 'role-item';
+            newRole.onclick = function() { selectRole(this, 'custom'); };
+            newRole.innerHTML = `
+                <div class="role-info">
+                    <span class="role-name">${name}</span>
+                    <span class="role-count">0 个用户</span>
+                </div>
+                <span class="role-badge custom">自定义</span>
+            `;
+            list.appendChild(newRole);
+            
+            document.getElementById('newRoleName').value = '';
+            document.getElementById('newRoleDesc').value = '';
+            closeModal('addRoleModal');
+            showToast('角色创建成功');
+        }
+        
+        function openEditRoleModal() {
+            showToast('角色编辑功能开发中');
+        }
+        
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
