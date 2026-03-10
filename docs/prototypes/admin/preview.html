@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模板预览 - 数据大屏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1E3A5F; --primary-light: #2E5C8A; --primary-lighter: #4A90D9;
+            --success: #28A745; --warning: #FFC107; --danger: #DC3545;
+            --text-dark: #1A1A2E; --text-body: #4A4A5A; --text-muted: #8A8A9A;
+            --border: #E0E0E5; --bg-dark: #1A1F2E; --bg-darker: #0F1219;
+        }
+        body { font-family: "PingFang SC", sans-serif; background: var(--bg-dark); color: white; overflow: hidden; height: 100vh; }
+        
+        .preview-header { height: 56px; background: var(--bg-darker); border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: rgba(255,255,255,0.08); color: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .back-btn:hover { background: rgba(255,255,255,0.15); }
+        .template-name { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        
+        .preview-body { display: flex; height: calc(100vh - 56px); margin-top: 56px; overflow: hidden; }
+        
+        /* 画布区域 */
+        .canvas-area { flex: 1; display: flex; flex-direction: column; background: #0D1117; position: relative; overflow: hidden; }
+        .canvas-wrapper { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .canvas { width: 1920px; height: 1080px; background: linear-gradient(135deg, #0A0E27 0%, #1A1F3A 50%, #0D1225 100%); position: relative; transform-origin: center center; box-shadow: 0 0 60px rgba(0,0,0,0.5); transition: transform 0.2s; }
+        
+        /* 画布上的组件 */
+        .canvas-component { position: absolute; transition: box-shadow 0.2s; }
+        
+        /* 模拟的组件内容 */
+        .comp-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+        /* 画布上的示例组件 */
+        .sample-chart { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; backdrop-filter: blur(10px); }
+        .chart-title { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .chart-title::before { content: ''; width: 3px; height: 14px; background: #00D4FF; border-radius: 2px; }
+        .chart-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 150px; padding: 20px 10px 0; }
+        .chart-bar { width: 30px; background: linear-gradient(180deg, #00D4FF 0%, rgba(0,212,255,0.3) 100%); border-radius: 4px 4px 0 0; }
+        
+        .sample-stat { background: linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(74,144,217,0.1) 100%); border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 36px; font-weight: 600; color: #fff; }
+        .stat-label { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 8px; }
+        
+        .sample-text { font-size: 24px; color: white; text-align: center; }
+        
+        /* Toast */
+        .toast-container { position: fixed; top: 70px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 16px; background: var(--bg-darker); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; font-size: 13px; animation: slideIn 0.3s ease; border-left: 3px solid var(--success); }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+        .toast.error { border-color: var(--danger); }
+        
+        /* 缩放控件 */
+        .scale-control { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px 12px; display: flex; align-items: center; gap: 8px; }
+        .scale-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px; }
+        .scale-value { font-size: 12px; color: #ccc; min-width: 40px; text-align: center; }
+    </style>
+</head>
+<body>
+    <!-- 顶部工具栏 -->
+    <header class="preview-header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.close()" title="关闭预览">×</button>
+            <div class="template-name">
+                <span>📊</span>
+                <span id="templateName">加载中...</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="back-btn" onclick="toggleFullscreen()" title="全屏">⛶</button>
+        </div>
+    </header>
+    
+    <!-- 预览主体 -->
+    <div class="preview-body">
+        <div class="canvas-area">
+            <div class="canvas-wrapper">
+                <div class="canvas" id="canvas">
+                    <!-- 动态加载组件 -->
+                </div>
+            </div>
+            <div class="scale-control">
+                <button class="scale-btn" onclick="zoomOut()">−</button>
+                <span class="scale-value" id="scaleValue">100%</span>
+                <button class="scale-btn" onclick="zoomIn()">+</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script>
+        const API_BASE = '/system/templates';
+        let templateId = null;
+        let scale = 100;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            templateId = params.get('id');
+            
+            if (!templateId) {
+                showToast('未指定模板ID', 'error');
+                return;
+            }
+            
+            loadTemplate(templateId);
+            autoScale();
+            window.addEventListener('resize', autoScale);
+        });
+
+        // 自动缩放适应屏幕
+        function autoScale() {
+            const wrapper = document.querySelector('.canvas-wrapper');
+            const canvas = document.getElementById('canvas');
+            const wrapperW = wrapper.clientWidth - 80; // padding
+            const wrapperH = wrapper.clientHeight - 80;
+            const canvasW = canvas.clientWidth || 1920;
+            const canvasH = canvas.clientHeight || 1080;
+            
+            const scaleW = wrapperW / canvasW;
+            const scaleH = wrapperH / canvasH;
+            
+            scale = Math.min(scaleW, scaleH) * 100;
+            scale = Math.floor(scale);
+            updateScale();
+        }
+
+        // 加载模板数据
+        async function loadTemplate(id) {
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!response.ok) throw new Error('Failed to load template');
+                
+                const template = await response.json();
+                document.getElementById('templateName').textContent = template.name;
+                document.title = template.name + ' - 预览';
+                
+                // 渲染画布内容
+                if (template.config) {
+                    try {
+                        const config = JSON.parse(template.config);
+                        
+                        // 设置画布尺寸
+                        if (config.canvas) {
+                            const canvas = document.getElementById('canvas');
+                            canvas.style.width = (config.canvas.width || 1920) + 'px';
+                            canvas.style.height = (config.canvas.height || 1080) + 'px';
+                            if (config.canvas.bg) canvas.style.background = config.canvas.bg;
+                        }
+                        
+                        if (Array.isArray(config.components)) {
+                            renderCanvas(config.components);
+                        } else {
+                            document.getElementById('canvas').innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#666;">暂无组件</div>';
+                        }
+                    } catch (e) {
+                        console.error('Parse config error', e);
+                        document.getElementById('canvas').innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#f00;">配置解析错误</div>';
+                    }
+                } else {
+                     document.getElementById('canvas').innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#666;">空模板</div>';
+                }
+                
+                // 重新计算缩放
+                setTimeout(autoScale, 100);
+                
+            } catch (error) {
+                console.error('Load template error:', error);
+                showToast('加载模板失败', 'error');
+            }
+        }
+
+        // 渲染画布
+        function renderCanvas(components) {
+            const canvas = document.getElementById('canvas');
+            canvas.innerHTML = ''; // 清空
+            components.forEach(comp => {
+                createCanvasComponent(comp);
+            });
+        }
+
+        // 创建组件 DOM (简化版，仅展示)
+        function createCanvasComponent(data) {
+            const div = document.createElement('div');
+            div.className = 'canvas-component';
+            div.dataset.id = data.id;
+            div.dataset.type = data.type;
+            
+            // 应用样式
+            Object.assign(div.style, {
+                left: (data.x || 0) + 'px',
+                top: (data.y || 0) + 'px',
+                width: (data.w || 200) + 'px',
+                height: (data.h || 150) + 'px',
+                zIndex: data.z || 1
+            });
+            
+            // 根据类型渲染内容
+            renderComponentContent(div, data.type, data.props || {});
+            
+            document.getElementById('canvas').appendChild(div);
+            return div;
+        }
+
+        function renderComponentContent(el, type, props) {
+            el.innerHTML = ''; // 清空
+            
+            // 样式处理
+            el.style.display = 'flex';
+            el.style.alignItems = props.alignItems || 'flex-start';
+            el.style.justifyContent = props.justifyContent || 'flex-start';
+            el.style.backgroundColor = props.backgroundColor || 'transparent';
+            el.style.color = props.color || '#fff';
+            el.style.fontSize = props.fontSize ? props.fontSize + 'px' : '14px';
+
+            if (type === 'html') {
+                el.innerHTML = props.html || '';
+            } else if (type.includes('chart')) {
+                el.innerHTML = `
+                    <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
+                        <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${props.title || '图表组件'}</div>
+                        <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px)">
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 60%;"></div>
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 80%;"></div>
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 45%;"></div>
+                        </div>
+                    </div>`;
+            } else if (type === 'text') {
+                el.innerHTML = `<div style="width:100%;white-space:pre-wrap;">${props.text || '文本内容'}</div>`;
+            } else if (type === 'image') {
+                if (props.src) {
+                    el.innerHTML = `<img src="${props.src}" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    el.innerHTML = `<div style="width:100%;height:100%;background:#333;display:flex;align-items:center;justify-content:center;color:#aaa">图片占位</div>`;
+                }
+            } else {
+                el.innerHTML = `<div class="comp-content" style="border:1px dashed #666;color:#aaa;">${type}</div>`;
+            }
+        }
+
+        // 缩放功能
+        function zoomIn() {
+            if (scale < 200) {
+                scale += 10;
+                updateScale();
+            }
+        }
+        
+        function zoomOut() {
+            if (scale > 20) {
+                scale -= 10;
+                updateScale();
+            }
+        }
+        
+        function updateScale() {
+            document.getElementById('scaleValue').textContent = scale + '%';
+            document.getElementById('canvas').style.transform = `scale(${scale / 100})`;
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        // Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + (type === 'error' ? 'error' : '');
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+    </script>
+</body>
+</html>

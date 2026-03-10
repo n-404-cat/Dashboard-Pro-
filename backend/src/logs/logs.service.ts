@@ -43,6 +43,10 @@ export class LogsService {
         };
     }
 
+    async findOne(id: string) {
+        return await this.logRepository.findOne({ where: { id: id as any } });
+    }
+
     async removeAll() {
         return await this.logRepository.delete({});
     }

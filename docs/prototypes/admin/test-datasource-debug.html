@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据源页面调试工具</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .debug-section { background: white; padding: 20px; margin: 10px 0; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .test-result { margin: 5px 0; padding: 5px; border-left: 3px solid #ddd; }
+        .test-result.success { border-left-color: green; }
+        .test-result.error { border-left-color: red; }
+        pre { background: #f8f8f8; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 数据源页面调试工具</h1>
+    
+    <div class="debug-section">
+        <h2>1. 基础环境检查</h2>
+        <div id="env-test"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>2. 本地存储检查</h2>
+        <div id="storage-test"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>3. DOM元素检查</h2>
+        <div id="dom-test"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>4. API连接测试</h2>
+        <div id="api-test"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>5. JavaScript错误捕获</h2>
+        <div id="error-test"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>6. 数据源页面模拟加载</h2>
+        <div id="simulate-test"></div>
+    </div>
+
+    <script>
+        const testResults = {
+            env: document.getElementById('env-test'),
+            storage: document.getElementById('storage-test'),
+            dom: document.getElementById('dom-test'),
+            api: document.getElementById('api-test'),
+            error: document.getElementById('error-test'),
+            simulate: document.getElementById('simulate-test')
+        };
+
+        // 全局错误捕获
+        window.addEventListener('error', (event) => {
+            testResults.error.innerHTML += `
+                <div class="test-result error">
+                    <strong>捕获到全局错误:</strong><br>
+                    错误信息: ${event.message}<br>
+                    文件名: ${event.filename}<br>
+                    行号: ${event.lineno}<br>
+                    列号: ${event.colno}
+                </div>
+            `;
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            testResults.error.innerHTML += `
+                <div class="test-result error">
+                    <strong>捕获到未处理的Promise拒绝:</strong><br>
+                    ${event.reason}
+                </div>
+            `;
+        });
+
+        // 1. 基础环境检查
+        function testEnvironment() {
+            let html = '';
+            
+            // 检查浏览器环境
+            html += `<div class="test-result ${window ? 'success' : 'error'}">✓ 浏览器环境: ${typeof window}</div>`;
+            html += `<div class="test-result ${document ? 'success' : 'error'}">✓ DOM文档: ${typeof document}</div>`;
+            html += `<div class="test-result ${localStorage ? 'success' : 'error'}">✓ 本地存储: ${typeof localStorage}</div>`;
+            html += `<div class="test-result ${fetch ? 'success' : 'error'}">✓ Fetch API: ${typeof fetch}</div>`;
+            
+            // 检查URL
+            html += `<div class="test-result">当前URL: ${window.location.href}</div>`;
+            html += `<div class="test-result">当前路径: ${window.location.pathname}</div>`;
+            
+            testResults.env.innerHTML = html;
+        }
+
+        // 2. 本地存储检查
+        function testLocalStorage() {
+            let html = '';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                const userInfo = localStorage.getItem('user_info');
+                
+                html += `<div class="test-result ${token ? 'success' : 'warning'}">Access Token: ${token ? '已设置 (' + token.substring(0, 20) + '...)' : '未设置'}</div>`;
+                html += `<div class="test-result ${userInfo ? 'success' : 'warning'}">用户信息: ${userInfo ? '已设置' : '未设置'}</div>`;
+                
+                if (userInfo) {
+                    try {
+                        const user = JSON.parse(userInfo);
+                        html += `<div class="test-result success">用户名: ${user.username || '未知'}</div>`;
+                        html += `<div class="test-result success">昵称: ${user.nickname || '未知'}</div>`;
+                    } catch (e) {
+                        html += `<div class="test-result error">用户信息解析失败: ${e.message}</div>`;
+                    }
+                }
+                
+                // 测试localStorage功能
+                localStorage.setItem('test_key', 'test_value');
+                const testValue = localStorage.getItem('test_key');
+                localStorage.removeItem('test_key');
+                html += `<div class="test-result ${testValue === 'test_value' ? 'success' : 'error'}">LocalStorage读写测试: ${testValue === 'test_value' ? '正常' : '失败'}</div>`;
+                
+            } catch (error) {
+                html += `<div class="test-result error">LocalStorage访问错误: ${error.message}</div>`;
+            }
+            
+            testResults.storage.innerHTML = html;
+        }
+
+        // 3. DOM元素检查
+        function testDOMElements() {
+            let html = '';
+            
+            // 模拟创建数据源页面的关键元素
+            const testElements = [
+                { id: 'dataList', description: '数据列表容器' },
+                { id: 'emptyState', description: '空状态提示' },
+                { id: 'pagination', description: '分页容器' },
+                { id: 'typeFilter', description: '类型筛选器' },
+                { id: 'searchInput', description: '搜索输入框' }
+            ];
+            
+            html += '<h4>当前页面元素检查:</h4>';
+            testElements.forEach(elem => {
+                const element = document.getElementById(elem.id);
+                html += `<div class="test-result ${element ? 'success' : 'warning'}">✓ ${elem.description}: ${element ? '找到' : '未找到'}</div>`;
+            });
+            
+            // 检查body元素
+            html += `<div class="test-result ${document.body ? 'success' : 'error'}">✓ Body元素: ${document.body ? '存在' : '不存在'}</div>`;
+            
+            testResults.dom.innerHTML = html;
+        }
+
+        // 4. API连接测试
+        async function testAPIConnection() {
+            let html = '';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                html += `<div class="test-result ${token ? 'success' : 'warning'}">使用Token: ${token ? '已设置' : '未设置'}</div>`;
+                
+                // 测试数据源API
+                const startTime = Date.now();
+                const response = await fetch('/system/data-sources?page=1&pageSize=1', {
+                    headers: {
+                        'Authorization': `Bearer ${token || 'test-token'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = Date.now();
+                
+                html += `<div class="test-result ${response.ok ? 'success' : 'error'}">API响应状态: ${response.status} ${response.statusText}</div>`;
+                html += `<div class="test-result">响应时间: ${endTime - startTime}ms</div>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    html += `<div class="test-result success">API数据格式: 正常</div>`;
+                    html += `<div class="test-result">返回记录数: ${data.list ? data.list.length : '未知'}</div>`;
+                    html += `<div class="test-result">总记录数: ${data.pagination ? data.pagination.total : '未知'}</div>`;
+                } else {
+                    const errorText = await response.text();
+                    html += `<div class="test-result error">错误详情: <pre>${errorText}</pre></div>`;
+                }
+                
+            } catch (error) {
+                html += `<div class="test-result error">API请求失败: ${error.message}</div>`;
+                html += `<div class="test-result">错误类型: ${error.constructor.name}</div>`;
+            }
+            
+            testResults.api.innerHTML = html;
+        }
+
+        // 5. 模拟数据源页面加载
+        async function simulateDatasourcePage() {
+            let html = '';
+            
+            try {
+                html += '<h4>模拟加载流程:</h4>';
+                
+                // 步骤1: 检查token
+                const token = localStorage.getItem('access_token');
+                html += `<div class="test-result ${token ? 'success' : 'warning'}">1. Token检查: ${token ? '通过' : '失败 - 可能未登录'}</div>`;
+                
+                // 步骤2: 模拟创建关键DOM元素
+                const mockContainer = document.createElement('div');
+                mockContainer.innerHTML = `
+                    <div id="dataList"></div>
+                    <div id="emptyState" style="display: none;"></div>
+                    <div id="pagination"></div>
+                    <select id="typeFilter"><option value="">全部</option></select>
+                    <input id="searchInput" type="text" />
+                `;
+                document.body.appendChild(mockContainer);
+                
+                // 检查模拟元素
+                const dataList = document.getElementById('dataList');
+                const emptyState = document.getElementById('emptyState');
+                const pagination = document.getElementById('pagination');
+                const typeFilter = document.getElementById('typeFilter');
+                const searchInput = document.getElementById('searchInput');
+                
+                html += `<div class="test-result ${dataList ? 'success' : 'error'}">2. dataList元素: ${dataList ? '找到' : '未找到'}</div>`;
+                html += `<div class="test-result ${emptyState ? 'success' : 'error'}">3. emptyState元素: ${emptyState ? '找到' : '未找到'}</div>`;
+                html += `<div class="test-result ${pagination ? 'success' : 'error'}">4. pagination元素: ${pagination ? '找到' : '未找到'}</div>`;
+                html += `<div class="test-result ${typeFilter ? 'success' : 'error'}">5. typeFilter元素: ${typeFilter ? '找到' : '未找到'}</div>`;
+                html += `<div class="test-result ${searchInput ? 'success' : 'error'}">6. searchInput元素: ${searchInput ? '找到' : '未找到'}</div>`;
+                
+                // 步骤3: 模拟加载数据
+                try {
+                    const response = await fetch('/system/data-sources?page=1&pageSize=10', {
+                        headers: {
+                            'Authorization': `Bearer ${token || 'test-token'}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        html += `<div class="test-result success">7. 数据加载: 成功 (${data.list.length}条记录)</div>`;
+                        
+                        // 模拟渲染
+                        if (dataList && data.list) {
+                            dataList.innerHTML = '<div style="padding: 20px; background: #f0f0f0;">模拟数据已加载</div>';
+                            html += `<div class="test-result success">8. 数据渲染: 成功</div>`;
+                        }
+                    } else {
+                        html += `<div class="test-result error">7. 数据加载: 失败 (${response.status})</div>`;
+                    }
+                } catch (error) {
+                    html += `<div class="test-result error">7. 数据加载异常: ${error.message}</div>`;
+                }
+                
+                // 清理模拟元素
+                mockContainer.remove();
+                
+            } catch (error) {
+                html += `<div class="test-result error">模拟过程出错: ${error.message}</div>`;
+            }
+            
+            testResults.simulate.innerHTML = html;
+        }
+
+        // 运行所有测试
+        async function runAllTests() {
+            console.log('开始数据源页面调试测试...');
+            
+            testEnvironment();
+            testLocalStorage();
+            testDOMElements();
+            
+            // 延迟执行API测试，确保前面的测试完成
+            setTimeout(async () => {
+                await testAPIConnection();
+                await simulateDatasourcePage();
+                
+                console.log('所有测试完成！');
+            }, 1000);
+        }
+
+        // 页面加载完成后运行测试
+        document.addEventListener('DOMContentLoaded', runAllTests);
+    </script>
+</body>
+</html>

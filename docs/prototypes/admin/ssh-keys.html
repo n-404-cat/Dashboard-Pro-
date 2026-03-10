@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH密钥管理 - 数据大屏管理系统</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .data-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .data-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .key-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: rgba(156, 39, 176, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .key-info {
+            flex: 1;
+        }
+
+        .key-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .key-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .key-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .key-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary-lighter);
+            color: var(--primary);
+        }
+
+        .action-btn.danger {
+            color: var(--danger);
+        }
+
+        .action-btn.danger:hover {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 引入布局脚本 -->
+    <script src="layout.js"></script>
+    <!-- 引入通用文件上传组件 -->
+    <script src="common/file-upload.js"></script>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title-group">
+                <h1 class="page-title">SSH密钥管理</h1>
+                <div class="breadcrumb"><a href="dashboard.html">首页</a><span>/</span><span>SSH密钥管理</span></div>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()"><span>➕</span> 新增密钥</button>
+        </div>
+
+        <div class="filter-bar">
+            <select class="filter-select" id="statusFilter" onchange="loadSshKeys()">
+                <option value="">全部状态</option>
+                <option value="1">启用</option>
+                <option value="0">禁用</option>
+            </select>
+            <input type="text" class="filter-input" placeholder="搜索密钥名称..." id="searchInput" oninput="loadSshKeys()">
+            <button class="btn btn-primary" onclick="loadSshKeys()">🔍 查询</button>
+        </div>
+
+        <div class="data-list" id="dataList">
+            <!-- 密钥列表将通过 JavaScript 动态加载 -->
+        </div>
+        
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState" style="display: none; text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔑</div>
+            <div>未找到匹配的SSH密钥</div>
+        </div>
+        
+        <div class="pagination" id="pagination">
+            <!-- 分页控件 -->
+        </div>
+    </main>
+
+    <!-- 新增/编辑密钥模态框 -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">新增SSH密钥</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="keyId">
+                <div class="form-group">
+                    <label class="form-label">密钥名称 *</label>
+                    <input type="text" class="form-input" id="keyName" placeholder="请输入密钥名称">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">密钥文件 *</label>
+                    <div id="keyUploadContainer"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">密钥密码 (可选)</label>
+                    <input type="password" class="form-input" id="keyPassword" placeholder="如果密钥有密码，请输入">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">关联用户 (可选)</label>
+                        <input type="text" class="form-input" id="keyUsername" placeholder="SSH用户名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态 *</label>
+                        <select class="form-input" id="keyStatus">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">备注</label>
+                    <textarea class="form-textarea" id="keyDesc" placeholder="请输入备注" style="height: 80px; width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveSshKey()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+        let currentSshKeys = [];
+        let keyUploadComponent = null;
+
+        // 初始化加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSshKeys();
+            initKeyUpload();
+        });
+
+        // 初始化密钥上传组件
+        function initKeyUpload() {
+            keyUploadComponent = new FileUploadComponent({
+                container: document.getElementById('keyUploadContainer'),
+                accept: '.key,.pem,.ppk',
+                maxSize: 10 * 1024 * 1024, // 10MB
+                uploadText: '点击或拖拽上传密钥文件',
+                placeholder: '暂未选择密钥文件',
+                onUpload: (fileData) => {
+                    console.log('密钥文件已上传:', fileData.name);
+                }
+            });
+        }
+
+        // 加载SSH密钥列表
+        async function loadSshKeys(page = 1) {
+            currentPage = page;
+            const dataList = document.getElementById('dataList');
+            const emptyState = document.getElementById('emptyState');
+            const pagination = document.getElementById('pagination');
+            
+            dataList.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+            
+            try {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const searchText = document.getElementById('searchInput').value;
+                
+                const params = new URLSearchParams();
+                params.append('page', page);
+                params.append('pageSize', pageSize);
+                if (statusFilter) params.append('status', statusFilter);
+                
+                const response = await fetch(`/system/ssh-keys?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load SSH keys');
+                
+                const result = await response.json();
+                const { list, pagination: pag } = result;
+                currentSshKeys = list;
+                
+                // 客户端过滤（如果后端不支持搜索）
+                let displayList = list;
+                if (searchText) {
+                    const lowerSearch = searchText.toLowerCase();
+                    displayList = list.filter(key => 
+                        key.name.toLowerCase().includes(lowerSearch) || 
+                        (key.description && key.description.toLowerCase().includes(lowerSearch))
+                    );
+                }
+
+                if (displayList.length === 0) {
+                    dataList.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    pagination.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                renderKeyList(displayList);
+                renderPagination(pag);
+                
+            } catch (error) {
+                console.error('Error loading SSH keys:', error);
+                showToast('加载失败', 'error');
+                dataList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">加载失败</div>';
+            }
+        }
+
+        // 渲染列表
+        function renderKeyList(list) {
+            const dataList = document.getElementById('dataList');
+
+            dataList.innerHTML = list.map(key => {
+                const statusBadge = key.status === 1 
+                    ? '<span class="status-badge success"><span class="status-dot"></span>正常</span>' 
+                    : '<span class="status-badge error"><span class="status-dot"></span>禁用</span>';
+
+                return `
+                <div class="data-card">
+                    <div class="key-icon">🔑</div>
+                    <div class="key-info">
+                        <div class="key-name">${key.name} ${statusBadge}</div>
+                        <div class="key-desc">${key.description || '暂无描述'}</div>
+                        <div class="key-meta">
+                            <span>👤 ${key.username || '未设置'}</span>
+                            <span>🕐 ${new Date(key.createTime).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="key-actions">
+                        <button class="action-btn" onclick="editSshKey('${key.id}')">✎ 编辑</button>
+                        <button class="action-btn danger" onclick="deleteSshKey('${key.id}')">🗑</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // 渲染分页
+        function renderPagination(pag) {
+            const pagination = document.getElementById('pagination');
+            const { total, page, totalPages } = pag;
+            
+            let html = `
+                <div class="pagination-info">共 ${total} 条记录</div>
+                <div class="pagination-btns">
+                    <button class="page-btn" ${page <= 1 ? 'disabled' : ''} onclick="loadSshKeys(${page - 1})">上一页</button>
+                    <span style="margin: 0 10px;">第 ${page} / ${totalPages} 页</span>
+                    <button class="page-btn" ${page >= totalPages ? 'disabled' : ''} onclick="loadSshKeys(${page + 1})">下一页</button>
+                </div>
+            `;
+            pagination.innerHTML = html;
+        }
+
+        // 打开新建模态框
+        function openCreateModal() {
+            document.getElementById('keyId').value = '';
+            document.getElementById('modalTitle').textContent = '新增SSH密钥';
+            document.getElementById('keyName').value = '';
+            document.getElementById('keyPassword').value = '';
+            document.getElementById('keyUsername').value = '';
+            document.getElementById('keyStatus').value = '1';
+            document.getElementById('keyDesc').value = '';
+            
+            // 清空文件上传组件
+            if (keyUploadComponent) {
+                keyUploadComponent.clear();
+            }
+            
+            openModal('createModal');
+        }
+
+        // 编辑密钥
+        function editSshKey(id) {
+            const key = currentSshKeys.find(k => k.id == id);
+            if (!key) return;
+            
+            document.getElementById('keyId').value = key.id;
+            document.getElementById('modalTitle').textContent = '编辑SSH密钥';
+            document.getElementById('keyName').value = key.name;
+            document.getElementById('keyPassword').value = key.keyPassword || '';
+            document.getElementById('keyUsername').value = key.username || '';
+            document.getElementById('keyStatus').value = key.status;
+            document.getElementById('keyDesc').value = key.description || '';
+            
+            // 清空文件上传组件（编辑时不需要重新上传密钥）
+            if (keyUploadComponent) {
+                keyUploadComponent.clear();
+            }
+            
+            openModal('createModal');
+        }
+
+        // 保存SSH密钥
+        async function saveSshKey() {
+            const id = document.getElementById('keyId').value;
+            const name = document.getElementById('keyName').value;
+            const keyPassword = document.getElementById('keyPassword').value;
+            const username = document.getElementById('keyUsername').value;
+            const status = document.getElementById('keyStatus').value;
+            const description = document.getElementById('keyDesc').value;
+            
+            if (!name) { showToast('请填写密钥名称', 'error'); return; }
+            
+            // 获取上传的文件内容
+            const uploadedFiles = keyUploadComponent.getFiles();
+            let privateKey = null;
+            
+            if (uploadedFiles.length > 0) {
+                privateKey = uploadedFiles[0].content;
+                if (!privateKey) { showToast('请上传密钥文件', 'error'); return; }
+            } else if (!id) {
+                // 新建时必须有密钥文件
+                showToast('请上传密钥文件', 'error'); return;
+            }
+            
+            const payload = {
+                name,
+                keyPassword,
+                username,
+                status: parseInt(status),
+                description
+            };
+            
+            if (privateKey) {
+                payload.privateKey = privateKey;
+            }
+            
+            const isEdit = !!id;
+            const url = isEdit ? `/system/ssh-keys/${id}` : '/system/ssh-keys';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    showToast(isEdit ? '更新成功' : '创建成功');
+                    closeModal('createModal');
+                    loadSshKeys(isEdit ? currentPage : 1);
+                } else {
+                    const err = await response.json();
+                    showToast(err.message || '操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        // 删除密钥
+        async function deleteSshKey(id) {
+            if (!confirm('确定要删除这个SSH密钥吗？')) return;
+            
+            try {
+                const response = await fetch(`/system/ssh-keys/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('删除成功');
+                    loadSshKeys(currentPage);
+                } else {
+                    showToast('删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'error') toast.style.borderLeftColor = 'var(--danger)';
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); }));
+    </script>
+</body>
+
+</html>

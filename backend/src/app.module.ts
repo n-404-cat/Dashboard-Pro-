@@ -9,11 +9,15 @@ import { LogsModule } from './logs/logs.module';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { TemplatesModule } from './templates/templates.module';
+import { DatasourcesModule } from './datasources/datasources.module';
+import { ApisModule } from './apis/apis.module';
+import { SshKeysModule } from './ssh-keys/ssh-keys.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SeedService } from './seed.service';
-import { User, Role, Permission } from './database/entities';
+import { User, Role, Permission, Template } from './database/entities';
 import configuration from './config/configuration';
 
 @Module({
@@ -27,10 +31,18 @@ import configuration from './config/configuration';
     UsersModule,
     RolesModule,
     PermissionsModule,
-    TypeOrmModule.forFeature([User, Role, Permission]),
+    TemplatesModule,
+    DatasourcesModule,
+    ApisModule,
+    SshKeysModule,
+    TypeOrmModule.forFeature([User, Role, Permission, Template]),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'docs', 'prototypes', 'admin'),
       serveRoot: '/admin',
+      exclude: ['/api*'],
+    }, {
+      rootPath: join(__dirname, '..', '..', 'docs', 'prototypes', 'screen'),
+      serveRoot: '/screen',
       exclude: ['/api*'],
     }),
   ],

@@ -61,7 +61,7 @@
                     <span>接口配置</span>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="openModal('createApiModal')">
+            <button class="btn btn-primary" onclick="openCreateModal()">
                 <span>➕</span>
                 新建接口
             </button>
@@ -83,63 +83,12 @@
                 <option value="auth">认证</option>
             </select>
             <input type="text" class="filter-input" placeholder="搜索接口名称/路径..." id="searchInput" oninput="filterApis()">
+            <button class="btn btn-primary" onclick="filterApis()">🔍 查询</button>
         </div>
         
         <!-- 接口列表 -->
         <div class="api-list" id="apiList">
-            <div class="api-card" data-method="get" data-module="template">
-                <div class="api-header">
-                    <div class="api-info">
-                        <div class="api-name">
-                            获取模板列表
-                            <span class="method-badge get">GET</span>
-                        </div>
-                        <div class="api-desc">获取所有模板的基本信息列表</div>
-                        <div class="api-path">
-                            <span class="api-url">/api/v1/templates</span>
-                        </div>
-                    </div>
-                    <div class="api-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
-                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
-                    </div>
-                </div>
-                <div class="api-stats">
-                    <div class="api-stat"><div class="api-stat-value">1,234</div><div class="api-stat-label">调用次数</div></div>
-                    <div class="api-stat"><div class="api-stat-value">45ms</div><div class="api-stat-label">Avg响应</div></div>
-                    <div class="api-stat"><div class="api-stat-value">99.9%</div><div class="api-stat-label">成功率</div></div>
-                    <div class="api-stat"><div class="api-stat-value">今天</div><div class="api-stat-label">最后调用</div></div>
-                </div>
-                <div class="api-tags">
-                    <span class="api-tag">模板</span>
-                    <span class="api-tag">公开</span>
-                </div>
-            </div>
-            
-            <div class="api-card" data-method="post" data-module="template">
-                <div class="api-header">
-                    <div class="api-info">
-                        <div class="api-name">
-                            创建模板
-                            <span class="method-badge post">POST</span>
-                        </div>
-                        <div class="api-desc">创建一个新的数据大屏模板</div>
-                        <div class="api-path">
-                            <span class="api-url">/api/v1/templates</span>
-                        </div>
-                    </div>
-                    <div class="api-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
-                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
-                    </div>
-                </div>
-                <div class="api-stats">
-                    <div class="api-stat"><div class="api-stat-value">856</div><div class="api-stat-label">调用次数</div></div>
-                    <div class="api-stat"><div class="api-stat-value">68ms</div><div class="api-stat-label">Avg响应</div></div>
-                    <div class="api-stat"><div class="api-stat-value">98.5%</div><div class="api-stat-label">成功率</div></div>
-                    <div class="api-stat"><div class="api-stat-value">今天</div><div class="api-stat-label">最后调用</div></div>
-                </div>
-            </div>
+            <!-- 接口列表将通过 JavaScript 动态加载 -->
         </div>
         
         <!-- 空状态 -->
@@ -148,64 +97,52 @@
             <div class="empty-title">未找到匹配的接口</div>
         </div>
         
-        <div class="pagination">
-            <span class="pagination-info" id="paginationInfo">共 5 个接口</span>
+        <div class="pagination" id="pagination">
+            <!-- 分页控件将通过 JavaScript 动态加载 -->
         </div>
     </main>
     
-    <!-- 新建接口模态框 -->
+    <!-- 新建/编辑接口模态框 -->
     <div class="modal-overlay" id="createApiModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">新建接口</h3>
+                <h3 class="modal-title" id="apiModalTitle">新建接口</h3>
                 <button class="modal-close" onclick="closeModal('createApiModal')">×</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="apiId">
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">接口名称 *</label>
                         <input type="text" class="form-input" id="apiName" placeholder="如：获取用户列表">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">请求方法 *</label>
-                        <select class="form-select" id="apiMethod">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
+                        <label class="form-label">查询类型 *</label>
+                        <select class="form-select" id="apiQueryType" onchange="toggleQueryType()">
+                            <option value="api">外部API</option>
+                            <option value="query">SQL查询</option>
+                            <option value="raw">原生查询</option>
                         </select>
                     </div>
                 </div>
+                <div class="form-group" id="dataSourceGroup" style="display: none;">
+                    <label class="form-label">数据源 *</label>
+                    <select class="form-select" id="apiDataSource">
+                        <!-- 数据源选项将动态加载 -->
+                    </select>
+                </div>
                 <div class="form-group">
-                    <label class="form-label">接口路径 *</label>
-                    <input type="text" class="form-input" id="apiPath" placeholder="/api/v1/resource">
+                    <label class="form-label" for="apiContent">查询内容/接口路径 *</label>
+                    <textarea class="form-textarea" id="apiContent" placeholder="/api/v1/resource 或 SELECT * FROM table" style="height: 80px;"></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">接口描述</label>
                     <textarea class="form-textarea" id="apiDesc" placeholder="简要描述接口功能"></textarea>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">所属模块</label>
-                        <select class="form-select" id="apiModule">
-                            <option value="template">模板管理</option>
-                            <option value="datasource">数据源管理</option>
-                            <option value="user">用户管理</option>
-                            <option value="auth">认证</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">认证方式</label>
-                        <select class="form-select" id="apiAuth">
-                            <option value="public">公开</option>
-                            <option value="required">需要认证</option>
-                        </select>
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('createApiModal')">取消</button>
-                <button class="btn btn-primary" onclick="createApi()">创建接口</button>
+                <button class="btn btn-primary" onclick="saveApi()">保存接口</button>
             </div>
         </div>
     </div>
@@ -218,20 +155,20 @@
                 <button class="modal-close" onclick="closeModal('testApiModal')">×</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="testApiId">
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">请求方法</label>
-                        <select class="form-select" id="testMethod">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
-                        </select>
+                        <label class="form-label">查询类型</label>
+                        <input type="text" class="form-input" id="testQueryType" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">接口路径</label>
-                        <input type="text" class="form-input" id="testUrl">
+                        <label class="form-label">查询内容</label>
+                        <input type="text" class="form-input" id="testContent" readonly>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">测试参数 (JSON)</label>
+                    <textarea class="form-textarea" id="testParams" placeholder='{"id": 1}' style="height: 100px;"></textarea>
                 </div>
                 <button class="btn btn-primary" onclick="runTest()">🚀 发送请求</button>
                 <div class="test-result" id="testResult">
@@ -247,6 +184,409 @@
     <div class="toast-container" id="toastContainer"></div>
     
     <script>
+        let currentPage = 1;
+        let pageSize = 10;
+        let currentApis = [];
+
+        // 初始化加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadApis();
+            loadDataSources();
+        });
+
+        // 加载接口列表
+        async function loadApis(page = 1) {
+            currentPage = page;
+            const apiList = document.getElementById('apiList');
+            const emptyState = document.getElementById('emptyState');
+            const pagination = document.getElementById('pagination');
+            
+            emptyState.classList.remove('show');
+            pagination.style.display = 'none';
+            // 显示加载状态
+            apiList.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+            
+            try {
+                const response = await fetch(`/system/apis?page=${page}&pageSize=${pageSize}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load APIs');
+                
+                const result = await response.json();
+                const { list, pagination: pag } = result;
+                currentApis = list;
+                
+                if (list.length === 0) {
+                    apiList.innerHTML = '';
+                    emptyState.classList.add('show');
+                    pagination.innerHTML = '';
+                    pagination.style.display = 'none';
+                    return;
+                }
+                
+                emptyState.classList.remove('show');
+                pagination.style.display = 'flex';
+                renderApiList(list);
+                renderPagination(pag);
+                
+            } catch (error) {
+                console.error('Error loading APIs:', error);
+                showToast('加载接口列表失败', 'error');
+                apiList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">加载失败</div>';
+                emptyState.classList.remove('show');
+                pagination.style.display = 'none';
+            }
+        }
+        
+        // 渲染接口列表
+        function renderApiList(apis) {
+            const apiList = document.getElementById('apiList');
+            apiList.innerHTML = apis.map(api => `
+                <div class="api-card" data-id="${api.id}">
+                    <div class="api-header">
+                        <div class="api-info">
+                            <div class="api-name">
+                                ${api.name}
+                                <span class="method-badge ${api.queryType === 'api' ? 'post' : 'get'}">${(api.queryType || '').toUpperCase()}</span>
+                            </div>
+                            <div class="api-desc">${api.description || '暂无描述'}</div>
+                            <div class="api-path">
+                                <span class="api-url">${api.queryContent}</span>
+                            </div>
+                        </div>
+                        <div class="api-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="testApi('${api.id}')">🧪 测试</button>
+                            <button class="btn btn-secondary btn-sm" onclick="editApi('${api.id}')">✏️ 编辑</button>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteApi('${api.id}')">🗑️ 删除</button>
+                        </div>
+                    </div>
+                    <div class="api-tags">
+                        <span class="api-tag">${api.queryType === 'api' ? '外部接口' : '数据库查询'}</span>
+                        <span class="api-tag">${new Date(api.createTime).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 渲染分页
+        function renderPagination(pag) {
+            const pagination = document.getElementById('pagination');
+            const { total, page, totalPages } = pag;
+            
+            let html = `
+                <div class="pagination-info">共 ${total} 条记录</div>
+                <div class="pagination-btns">
+                    <button class="page-btn" ${page <= 1 ? 'disabled' : ''} onclick="loadApis(${page - 1})">上一页</button>
+                    <span style="margin: 0 10px;">第 ${page} / ${totalPages} 页</span>
+                    <button class="page-btn" ${page >= totalPages ? 'disabled' : ''} onclick="loadApis(${page + 1})">下一页</button>
+                </div>
+            `;
+            pagination.innerHTML = html;
+        }
+
+        // 加载数据源选项
+        async function loadDataSources() {
+            try {
+                const response = await fetch('/system/data-sources?page=1&pageSize=100', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const select = document.getElementById('apiDataSource');
+                    select.innerHTML = result.list.map(ds => 
+                        `<option value="${ds.id}">${ds.name} (${ds.sourceType})</option>`
+                    ).join('');
+                }
+            } catch (error) {
+                console.error('Error loading datasources:', error);
+            }
+        }
+
+        // 切换查询类型显示
+        function toggleQueryType() {
+            const type = document.getElementById('apiQueryType').value;
+            const dsGroup = document.getElementById('dataSourceGroup');
+            const contentLabel = document.querySelector('label[for="apiContent"]');
+            
+            if (type === 'api') {
+                dsGroup.style.display = 'block'; // API类型也需要选择数据源（如基础URL配置）
+                contentLabel.textContent = '接口路径 *';
+                document.getElementById('apiContent').placeholder = '/api/v1/resource';
+            } else {
+                dsGroup.style.display = 'block';
+                contentLabel.textContent = 'SQL语句 *';
+                document.getElementById('apiContent').placeholder = 'SELECT * FROM table WHERE id = ?';
+            }
+        }
+
+        // 打开新建模态框
+        function openCreateModal() {
+            document.getElementById('apiId').value = '';
+            document.getElementById('apiModalTitle').textContent = '新建接口';
+            document.getElementById('apiName').value = '';
+            document.getElementById('apiQueryType').value = 'api';
+            document.getElementById('apiDataSource').value = '';
+            document.getElementById('apiContent').value = '';
+            document.getElementById('apiDesc').value = '';
+            toggleQueryType();
+            openModal('createApiModal');
+        }
+
+        // 打开编辑模态框
+        function editApi(id) {
+            const api = currentApis.find(a => a.id == id);
+            if (!api) return;
+            
+            document.getElementById('apiId').value = api.id;
+            document.getElementById('apiModalTitle').textContent = '编辑接口';
+            document.getElementById('apiName').value = api.name;
+            document.getElementById('apiQueryType').value = api.queryType;
+            // 等待数据源加载完成后再设置选中值，这里假设数据源已加载
+            document.getElementById('apiDataSource').value = api.dataSourceId;
+            document.getElementById('apiContent').value = api.queryContent;
+            document.getElementById('apiDesc').value = api.description || '';
+            
+            toggleQueryType();
+            openModal('createApiModal');
+        }
+
+        // 保存接口（新建或更新）
+        async function saveApi() {
+            const id = document.getElementById('apiId').value;
+            const name = document.getElementById('apiName').value;
+            const queryType = document.getElementById('apiQueryType').value;
+            const dataSourceId = document.getElementById('apiDataSource').value;
+            const content = document.getElementById('apiContent').value;
+            const desc = document.getElementById('apiDesc').value;
+            
+            if (!name || !content || !dataSourceId) {
+                showToast('请填写必填字段', 'error');
+                return;
+            }
+            
+            const isEdit = !!id;
+            const url = isEdit ? `/system/apis/${id}` : '/system/apis';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        queryType,
+                        dataSourceId: parseInt(dataSourceId),
+                        queryContent: content,
+                        description: desc
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast(isEdit ? '接口更新成功' : '接口创建成功');
+                    closeModal('createApiModal');
+                    loadApis(isEdit ? currentPage : 1);
+                } else {
+                    const err = await response.json();
+                    showToast(err.message || (isEdit ? '更新失败' : '创建失败'), 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        // 删除接口
+        async function deleteApi(id) {
+            if (!confirm('确定要删除这个接口吗？')) return;
+            
+            try {
+                const response = await fetch(`/system/apis/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('接口已删除');
+                    loadApis(currentPage);
+                } else {
+                    showToast('删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+        
+        // 测试API
+        function testApi(id) {
+            const api = currentApis.find(a => a.id == id);
+            if (!api) return;
+            
+            document.getElementById('testApiId').value = id;
+            document.getElementById('testQueryType').value = api.queryType;
+            document.getElementById('testContent').value = api.queryContent;
+            document.getElementById('testResult').classList.remove('show');
+            document.getElementById('testParams').value = '';
+            
+            openModal('testApiModal');
+        }
+        
+        // 运行测试
+        async function runTest() {
+            const id = document.getElementById('testApiId').value;
+            const paramsStr = document.getElementById('testParams').value;
+            const result = document.getElementById('testResult');
+            const content = document.getElementById('testResultContent');
+            
+            let params = {};
+            try {
+                if (paramsStr.trim()) {
+                    params = JSON.parse(paramsStr);
+                }
+            } catch (e) {
+                showToast('参数格式错误，请输入有效的JSON', 'error');
+                return;
+            }
+            
+            result.className = 'test-result show';
+            content.textContent = '⏳ 正在发送请求...';
+            
+            try {
+                const response = await fetch(`/system/apis/${id}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({ params })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.className = 'test-result show success';
+                    content.textContent = JSON.stringify(data.data, null, 2);
+                } else {
+                    result.className = 'test-result show error';
+                    content.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                result.className = 'test-result show error';
+                content.textContent = '请求发送失败: ' + error.message;
+            }
+        }
+        
+        // 筛选功能
+        async function filterApis() {
+            const methodFilter = document.getElementById('methodFilter').value;
+            const moduleFilter = document.getElementById('moduleFilter').value;
+            const searchText = document.getElementById('searchInput').value;
+            
+            // 构建查询参数
+            const params = new URLSearchParams();
+            params.append('page', '1'); // 搜索时重置为第一页
+            params.append('pageSize', pageSize);
+            
+            // 处理方法/类型筛选
+            if (methodFilter) {
+                // 前端 'post' -> 后端 'api' (外部接口)
+                // 前端 'get' -> 后端 'query' (SQL查询)
+                // 前端 'put' -> 后端 'raw' (原生查询)
+                // 前端 'delete' -> 暂无对应，或可作为扩展
+                if (methodFilter === 'post') params.append('queryType', 'api');
+                else if (methodFilter === 'get') params.append('queryType', 'query');
+                else if (methodFilter === 'put') params.append('queryType', 'raw');
+            }
+            
+            // 处理关键词搜索
+            if (searchText) {
+                params.append('keyword', searchText);
+            }
+
+            // 处理模块筛选（假设模块对应 templateId，但目前没有直接的模块字段，这里暂时保留逻辑）
+            if (moduleFilter) {
+                if (moduleFilter === 'template') {
+                    // 假设 template 模块对应 templateId 不为空，或者特定的 templateId
+                    // 这里我们暂时无法准确映射，但可以尝试传递 module 参数给后端，让后端决定如何处理
+                    // 或者如果我们知道 template 模块对应哪些接口，可以在这里处理
+                    // 目前后端支持 templateId 参数
+                    // 如果用户选择了 'template'，我们可以尝试不传 templateId，而是传一个标志？
+                    // 或者我们可以假设 'template' 对应 templateId=1 (示例)
+                    // 为了演示效果，如果选了 template，我们传 keyword='template' ? 不太好
+                    
+                    // 修正：后端目前没有 module 字段。
+                    // 我们可以尝试通过关键词搜索来模拟，如果接口名称包含 '模板' 或 'template'
+                    // params.append('keyword', '模板'); 
+                    
+                    // 或者，我们可以暂时忽略这个筛选，或者提示用户该功能未完善
+                    console.log('Module filter not fully supported yet');
+                }
+            }
+            
+            const apiList = document.getElementById('apiList');
+            const emptyState = document.getElementById('emptyState');
+            const pagination = document.getElementById('pagination');
+            
+            emptyState.classList.remove('show');
+            pagination.style.display = 'none';
+            // 显示加载状态
+            apiList.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+            
+            try {
+                // 使用 URLSearchParams 生成的查询字符串自动处理编码
+                const response = await fetch(`/system/apis?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load APIs');
+                
+                const result = await response.json();
+                const { list, pagination: pag } = result;
+                currentApis = list;
+                
+                if (list.length === 0) {
+                    apiList.innerHTML = '';
+                    emptyState.classList.add('show');
+                    pagination.innerHTML = '';
+                    pagination.style.display = 'none';
+                    return;
+                }
+                
+                emptyState.classList.remove('show');
+                pagination.style.display = 'flex';
+                renderApiList(list);
+                renderPagination(pag);
+                
+            } catch (error) {
+                console.error('Error filtering APIs:', error);
+                showToast('搜索失败', 'error');
+                apiList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger);">搜索失败</div>';
+                emptyState.classList.remove('show');
+                pagination.style.display = 'none';
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'error') toast.style.borderLeftColor = 'var(--danger)';
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         // 下拉菜单
         function toggleDropdown(menuId) {
             const menu = document.getElementById(menuId);
@@ -257,44 +597,6 @@
         document.addEventListener('click', function() {
             document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
         });
-        
-        // 筛选功能
-        function filterApis() {
-            const methodFilter = document.getElementById('methodFilter').value;
-            const moduleFilter = document.getElementById('moduleFilter').value;
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            
-            let visibleCount = 0;
-            
-            document.querySelectorAll('.api-card').forEach(card => {
-                const method = card.dataset.method;
-                const module = card.dataset.module;
-                const name = card.querySelector('.api-name').textContent.toLowerCase();
-                const url = card.querySelector('.api-url').textContent.toLowerCase();
-                
-                const matchMethod = !methodFilter || method === methodFilter;
-                const matchModule = !moduleFilter || module === moduleFilter;
-                const matchSearch = !searchText || name.includes(searchText) || url.includes(searchText);
-                
-                if (matchMethod && matchModule && matchSearch) {
-                    card.style.display = '';
-                    visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            const emptyState = document.getElementById('emptyState');
-            const paginationInfo = document.getElementById('paginationInfo');
-            
-            if (visibleCount === 0) {
-                emptyState.classList.add('show');
-                paginationInfo.textContent = '共 0 个接口';
-            } else {
-                emptyState.classList.remove('show');
-                paginationInfo.textContent = `共 ${visibleCount} 个接口`;
-            }
-        }
         
         // 模态框
         function openModal(modalId) {
@@ -310,111 +612,6 @@
                 if (e.target === this) this.classList.remove('show');
             });
         });
-        
-        // 新建接口
-        function createApi() {
-            const name = document.getElementById('apiName').value;
-            const method = document.getElementById('apiMethod').value;
-            const path = document.getElementById('apiPath').value;
-            const desc = document.getElementById('apiDesc').value;
-            const module = document.getElementById('apiModule').value;
-            
-            if (!name || !path) {
-                showToast('请填写必填字段', 'error');
-                return;
-            }
-            
-            const apiList = document.getElementById('apiList');
-            const newApi = document.createElement('div');
-            newApi.className = 'api-card';
-            newApi.dataset.method = method.toLowerCase();
-            newApi.dataset.module = module;
-            newApi.innerHTML = `
-                <div class="api-header">
-                    <div class="api-info">
-                        <div class="api-name">
-                            ${name}
-                            <span class="method-badge ${method.toLowerCase()}">${method}</span>
-                        </div>
-                        <div class="api-desc">${desc || '暂无描述'}</div>
-                        <div class="api-path">
-                            <span class="api-url">${path}</span>
-                        </div>
-                    </div>
-                    <div class="api-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="testApi(this)">🧪 测试</button>
-                        <button class="btn btn-secondary btn-sm" onclick="editApi(this)">✏️ 编辑</button>
-                    </div>
-                </div>
-                <div class="api-stats">
-                    <div class="api-stat"><div class="api-stat-value">0</div><div class="api-stat-label">调用次数</div></div>
-                    <div class="api-stat"><div class="api-stat-value">-</div><div class="api-stat-label">Avg响应</div></div>
-                    <div class="api-stat"><div class="api-stat-value">-</div><div class="api-stat-label">成功率</div></div>
-                    <div class="api-stat"><div class="api-stat-value">从未</div><div class="api-stat-label">最后调用</div></div>
-                </div>
-            `;
-            apiList.insertBefore(newApi, apiList.firstChild);
-            
-            // 清空表单
-            document.getElementById('apiName').value = '';
-            document.getElementById('apiPath').value = '';
-            document.getElementById('apiDesc').value = '';
-            
-            closeModal('createApiModal');
-            showToast('接口创建成功');
-            filterApis();
-        }
-        
-        // 测试API
-        function testApi(btn) {
-            const card = btn.closest('.api-card');
-            const method = card.dataset.method;
-            const url = card.querySelector('.api-url').textContent;
-            
-            document.getElementById('testMethod').value = method.toUpperCase();
-            document.getElementById('testUrl').value = url;
-            document.getElementById('testResult').classList.remove('show');
-            
-            openModal('testApiModal');
-        }
-        
-        // 编辑API
-        function editApi(btn) {
-            const card = btn.closest('.api-card');
-            const name = card.querySelector('.api-name').childNodes[0].textContent.trim();
-            showToast(`编辑接口: ${name}`);
-        }
-        
-        // 运行测试
-        function runTest() {
-            const result = document.getElementById('testResult');
-            const content = document.getElementById('testResultContent');
-            
-            result.className = 'test-result show';
-            content.textContent = '⏳ 正在发送请求...';
-            
-            setTimeout(() => {
-                const success = Math.random() > 0.2;
-                if (success) {
-                    result.className = 'test-result show success';
-                    content.textContent = JSON.stringify({ code: 200, message: "success", data: {} }, null, 2);
-                } else {
-                    result.className = 'test-result show error';
-                    content.textContent = JSON.stringify({ code: 500, error: "Internal Server Error" }, null, 2);
-                }
-            }, 1000);
-        }
-        
-        // Toast
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            if (type === 'error') toast.style.borderLeftColor = 'var(--danger)';
-            toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
     </script>
 </body>
 </html>

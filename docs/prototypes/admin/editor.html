@@ -227,9 +227,13 @@
                         <div class="component-icon">📐</div>
                         <div class="component-name">行</div>
                     </div>
+                    <div class="component-item" draggable="true" data-type="html">
+                        <div class="component-icon">{'<>'}</div>
+                        <div class="component-name">代码</div>
+                    </div>
                 </div>
             </div>
-        </aside>
+        </div>
         
         <!-- 画布区域 -->
         <div class="canvas-area">
@@ -432,9 +436,331 @@
     <div class="toast-container" id="toastContainer"></div>
     
     <script>
+        const API_BASE = '/system/templates';
+        let templateId = null;
         let scale = 100;
         let selectedComponent = null;
+        // 用于画布内拖拽
+        let isDraggingComponent = false;
+        let dragOffset = { x: 0, y: 0 };
         
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            templateId = params.get('id');
+            
+            if (!templateId) {
+                showToast('未指定模板ID，正在返回...', 'error');
+                setTimeout(() => window.location.href = 'templates.html', 1500);
+                return;
+            }
+            
+            loadTemplate(templateId);
+        });
+
+        // 加载模板数据
+        async function loadTemplate(id) {
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!response.ok) throw new Error('Failed to load template');
+                
+                const template = await response.json();
+                document.getElementById('templateNameInput').value = template.name;
+                
+                // 渲染画布内容
+                if (template.config) {
+                    try {
+                        const config = JSON.parse(template.config);
+                        
+                        // 应用画布配置
+                        if (config.canvas) {
+                            const canvas = document.getElementById('canvas');
+                            if (config.canvas.width) canvas.style.width = config.canvas.width + 'px';
+                            if (config.canvas.height) canvas.style.height = config.canvas.height + 'px';
+                            if (config.canvas.bg) canvas.style.background = config.canvas.bg;
+                            
+                            // 更新分辨率选择框
+                            const resSelect = document.getElementById('resolutionSelect');
+                            const resString = `${config.canvas.width}x${config.canvas.height}`;
+                            // 检查是否存在该选项，不存在则不选中或添加（这里简单处理，若匹配则选中）
+                            for (let i = 0; i < resSelect.options.length; i++) {
+                                if (resSelect.options[i].value === resString) {
+                                    resSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (Array.isArray(config.components)) {
+                            renderCanvas(config.components);
+                        } else {
+                            // Empty config, clear canvas
+                            document.getElementById('canvas').innerHTML = '';
+                        }
+                    } catch (e) {
+                        console.error('Parse config error', e);
+                        document.getElementById('canvas').innerHTML = '';
+                    }
+                } else {
+                     document.getElementById('canvas').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Load template error:', error);
+                showToast('加载模板失败', 'error');
+            }
+        }
+
+        // 渲染画布
+        function renderCanvas(components) {
+            const canvas = document.getElementById('canvas');
+            canvas.innerHTML = ''; // 清空
+            components.forEach(comp => {
+                createCanvasComponent(comp);
+            });
+        }
+
+        // 创建组件 DOM
+        function createCanvasComponent(data) {
+            const div = document.createElement('div');
+            div.className = 'canvas-component';
+            div.dataset.id = data.id || ('comp_' + Date.now() + Math.random().toString(36).substr(2, 5));
+            div.dataset.type = data.type;
+            div.dataset.props = JSON.stringify(data.props || {});
+            
+            // 应用样式
+            Object.assign(div.style, {
+                left: (data.x || 0) + 'px',
+                top: (data.y || 0) + 'px',
+                width: (data.w || 200) + 'px',
+                height: (data.h || 150) + 'px',
+                zIndex: data.z || 1
+            });
+            
+            // 根据类型渲染内容 (简化版)
+            renderComponentContent(div, data.type, data.props || {});
+            
+            // 绑定事件
+            bindComponentEvents(div);
+            
+            document.getElementById('canvas').appendChild(div);
+            return div;
+        }
+
+        // 绑定组件交互事件
+        function bindComponentEvents(el) {
+            // 选中
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                selectComponent(this);
+            });
+
+            // 拖动 (mousedown)
+            el.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return; // 仅左键
+                e.stopPropagation();
+                
+                isDraggingComponent = true;
+                selectComponent(this);
+                
+                const rect = this.getBoundingClientRect();
+                const scaleFactor = scale / 100;
+                
+                // 计算鼠标相对于组件左上角的偏移
+                dragOffset.x = (e.clientX - rect.left) / scaleFactor;
+                dragOffset.y = (e.clientY - rect.top) / scaleFactor;
+                
+                // 绑定全局移动和松开事件
+                document.addEventListener('mousemove', onComponentDragMove);
+                document.addEventListener('mouseup', onComponentDragEnd);
+            });
+        }
+
+        // 组件拖动中
+        function onComponentDragMove(e) {
+            if (!isDraggingComponent || !selectedComponent) return;
+            
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            const scaleFactor = scale / 100;
+            
+            // 计算新坐标 (相对于画布)
+            let newX = (e.clientX - canvasRect.left) / scaleFactor - dragOffset.x;
+            let newY = (e.clientY - canvasRect.top) / scaleFactor - dragOffset.y;
+            
+            // 吸附网格 (可选，这里简单做个 10px 吸附)
+            newX = Math.round(newX / 10) * 10;
+            newY = Math.round(newY / 10) * 10;
+            
+            selectedComponent.style.left = newX + 'px';
+            selectedComponent.style.top = newY + 'px';
+            
+            // Update input if exists
+            const leftInput = document.querySelector('.prop-input[data-key="left"]');
+            if (leftInput) leftInput.value = parseInt(newX);
+            const topInput = document.querySelector('.prop-input[data-key="top"]');
+            if (topInput) topInput.value = parseInt(newY);
+        }
+
+        // 组件拖动结束
+        function onComponentDragEnd(e) {
+            isDraggingComponent = false;
+            document.removeEventListener('mousemove', onComponentDragMove);
+            document.removeEventListener('mouseup', onComponentDragEnd);
+        }
+
+        // 选中组件
+        function selectComponent(el) {
+            if (selectedComponent) selectedComponent.classList.remove('selected');
+            selectedComponent = el;
+            if (el) {
+                el.classList.add('selected');
+                updatePropertyPanel(el);
+            }
+        }
+
+        function renderComponentContent(el, type, props) {
+            el.innerHTML = ''; // 清空
+            
+            // 样式处理
+            el.style.display = 'flex';
+            el.style.alignItems = props.alignItems || 'flex-start';
+            el.style.justifyContent = props.justifyContent || 'flex-start';
+            el.style.backgroundColor = props.backgroundColor || 'transparent';
+            el.style.color = props.color || '#fff';
+            el.style.fontSize = props.fontSize ? props.fontSize + 'px' : '14px';
+
+            if (type === 'html') {
+                el.innerHTML = props.html || '<div style="width:100%;height:100%;border:1px dashed #666;display:flex;align-items:center;justify-content:center;color:#888">自定义HTML (双击编辑)</div>';
+            } else if (type.includes('chart')) {
+                el.innerHTML = `
+                    <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
+                        <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${props.title || '图表组件'}</div>
+                        <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px)">
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 60%;"></div>
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 80%;"></div>
+                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 45%;"></div>
+                        </div>
+                    </div>`;
+            } else if (type === 'text') {
+                el.innerHTML = `<div style="width:100%;white-space:pre-wrap;">${props.text || '文本内容'}</div>`;
+            } else if (type === 'image') {
+                if (props.src) {
+                    el.innerHTML = `<img src="${props.src}" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    el.innerHTML = `<div style="width:100%;height:100%;background:#333;display:flex;align-items:center;justify-content:center;color:#aaa">图片占位</div>`;
+                }
+            } else {
+                el.innerHTML = `<div class="comp-content" style="border:1px dashed #666;color:#aaa;">${type}</div>`;
+            }
+        }
+
+        // 更新属性面板
+        function updatePropertyPanel(el) {
+            if (!el) return;
+            
+            const type = el.dataset.type;
+            const props = JSON.parse(el.dataset.props || '{}');
+            
+            // 通用属性
+            const commonPanel = document.getElementById('style-panel');
+            commonPanel.innerHTML = `
+                <div class="property-group">
+                    <div class="group-title">位置与尺寸</div>
+                    <div class="property-row">
+                        <label>X</label>
+                        <input type="number" class="prop-input" data-key="left" value="${parseInt(el.style.left)}">
+                    </div>
+                    <div class="property-row">
+                        <label>Y</label>
+                        <input type="number" class="prop-input" data-key="top" value="${parseInt(el.style.top)}">
+                    </div>
+                    <div class="property-row">
+                        <label>宽</label>
+                        <input type="number" class="prop-input" data-key="width" value="${parseInt(el.style.width)}">
+                    </div>
+                    <div class="property-row">
+                        <label>高</label>
+                        <input type="number" class="prop-input" data-key="height" value="${parseInt(el.style.height)}">
+                    </div>
+                </div>
+            `;
+            
+            // 特有属性
+            const dataPanel = document.getElementById('data-panel');
+            let specificHtml = '';
+            
+            if (type === 'text') {
+                specificHtml += `
+                    <div class="property-group">
+                        <div class="group-title">文本内容</div>
+                        <textarea class="prop-data-input" data-prop="text" rows="3" style="width:100%;background:#333;color:#fff;border:1px solid #444">${props.text || ''}</textarea>
+                    </div>
+                    <div class="property-group">
+                        <div class="group-title">字体样式</div>
+                        <div class="property-row">
+                            <label>字号</label>
+                            <input type="number" class="prop-data-input" data-prop="fontSize" value="${props.fontSize || 24}">
+                        </div>
+                        <div class="property-row">
+                            <label>颜色</label>
+                            <input type="color" class="prop-data-input" data-prop="color" value="${props.color || '#ffffff'}">
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'html') {
+                specificHtml += `
+                    <div class="property-group">
+                        <div class="group-title">自定义 HTML 代码</div>
+                        <textarea class="prop-data-input" data-prop="html" rows="10" style="width:100%;background:#333;color:#0f0;font-family:monospace;border:1px solid #444">${props.html || ''}</textarea>
+                    </div>
+                `;
+            } else if (type === 'image') {
+                specificHtml += `
+                    <div class="property-group">
+                        <div class="group-title">图片链接</div>
+                        <input type="text" class="prop-data-input" data-prop="src" value="${props.src || ''}" style="width:100%">
+                    </div>
+                `;
+            } else if (type.includes('chart')) {
+                 specificHtml += `
+                    <div class="property-group">
+                        <div class="group-title">图表标题</div>
+                        <input type="text" class="prop-data-input" data-prop="title" value="${props.title || ''}" style="width:100%">
+                    </div>
+                `;
+            }
+            
+            dataPanel.innerHTML = specificHtml;
+            
+            // 绑定事件
+            bindPropertyInputs(el);
+        }
+
+        function bindPropertyInputs(el) {
+            // 样式位置输入
+            document.querySelectorAll('.prop-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const key = this.dataset.key;
+                    el.style[key] = this.value + 'px';
+                });
+            });
+            
+            // 数据属性输入
+            document.querySelectorAll('.prop-data-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const propKey = this.dataset.prop;
+                    const props = JSON.parse(el.dataset.props || '{}');
+                    props[propKey] = this.value;
+                    el.dataset.props = JSON.stringify(props);
+                    
+                    // 重新渲染内容
+                    renderComponentContent(el, el.dataset.type, props);
+                });
+            });
+        }
+
+
         // 缩放功能
         function zoomIn() {
             if (scale < 150) {
@@ -463,70 +789,77 @@
             document.getElementById(tab + '-panel').style.display = 'block';
         }
         
-        // 组件选择
-        document.querySelectorAll('.canvas-component').forEach(comp => {
-            comp.addEventListener('click', function(e) {
-                e.stopPropagation();
-                document.querySelectorAll('.canvas-component').forEach(c => c.classList.remove('selected'));
-                this.classList.add('selected');
-                selectedComponent = this;
-            });
-        });
-        
         // 点击画布取消选择
         document.getElementById('canvas').addEventListener('click', function() {
-            document.querySelectorAll('.canvas-component').forEach(c => c.classList.remove('selected'));
-            selectedComponent = null;
+            selectComponent(null);
         });
         
-        // 图层点击
-        document.querySelectorAll('.layer-item').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelectorAll('.layer-item').forEach(i => i.classList.remove('selected'));
-                this.classList.add('selected');
-            });
-        });
-        
-        // 拖拽组件
+        // 拖拽添加新组件
         let draggedType = null;
         document.querySelectorAll('.component-item').forEach(item => {
             item.addEventListener('dragstart', function(e) {
                 draggedType = this.dataset.type;
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('text/plain', draggedType); // Ensure data is carried
             });
         });
         
         const canvas = document.getElementById('canvas');
-        canvas.addEventListener('dragover', e => e.preventDefault());
-        canvas.addEventListener('drop', function(e) {
+        const canvasWrapper = document.querySelector('.canvas-wrapper');
+        
+        // 绑定到 wrapper 以扩大拖放区域
+        canvasWrapper.addEventListener('dragover', e => {
+            e.preventDefault(); // Essential for drop
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        canvasWrapper.addEventListener('drop', function(e) {
             e.preventDefault();
-            if (draggedType) {
+            // Try getting type from variable or dataTransfer
+            const type = draggedType || e.dataTransfer.getData('text/plain');
+            
+            if (type) {
                 const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / (scale / 100);
-                const y = (e.clientY - rect.top) / (scale / 100);
-                addComponent(draggedType, x, y);
+                const scaleFactor = scale / 100;
+                // 计算相对于 canvas 的坐标
+                const x = (e.clientX - rect.left) / scaleFactor;
+                const y = (e.clientY - rect.top) / scaleFactor;
+                
+                // 创建组件数据
+                const newCompData = {
+                    type: type,
+                    x: Math.round(x - 100), // 居中放置 (假设宽200)
+                    y: Math.round(y - 75),  // 居中放置 (假设高150)
+                    w: 200,
+                    h: 150,
+                    props: { title: '新组件' }
+                };
+                
+                const el = createCanvasComponent(newCompData);
+                selectComponent(el);
+                showToast('组件已添加');
+                draggedType = null;
             }
         });
         
-        function addComponent(type, x, y) {
-            const newComp = document.createElement('div');
-            newComp.className = 'canvas-component';
-            newComp.style.cssText = `left: ${x}px; top: ${y}px; width: 200px; height: 150px;`;
-            newComp.innerHTML = '<div class="sample-text" style="font-size: 14px; color: rgba(255,255,255,0.5);">新组件 - ' + type + '</div>';
-            canvas.appendChild(newComp);
-            showToast('组件已添加');
-        }
-        
         // 操作功能
-        function undo() { showToast('撤销操作'); }
-        function redo() { showToast('重做操作'); }
+        function undo() { showToast('撤销功能开发中'); }
+        function redo() { showToast('重做功能开发中'); }
         
         function copyComponent() {
             if (selectedComponent) {
                 const clone = selectedComponent.cloneNode(true);
+                // 偏移一点
                 clone.style.left = (parseInt(clone.style.left) + 20) + 'px';
                 clone.style.top = (parseInt(clone.style.top) + 20) + 'px';
+                // 重新生成 ID
+                clone.dataset.id = 'comp_' + Date.now();
                 clone.classList.remove('selected');
+                
+                bindComponentEvents(clone); // 绑定事件
                 canvas.appendChild(clone);
+                
+                selectComponent(clone);
                 showToast('组件已复制');
             } else {
                 showToast('请先选择组件');
@@ -548,8 +881,12 @@
         }
         
         // 预览
-        function previewTemplate() {
-            document.getElementById('previewModal').classList.add('show');
+        async function previewTemplate() {
+            // 先保存
+            const success = await saveTemplate();
+            if (success) {
+                window.open(`../../screen/viewer.html?id=${templateId}`, '_blank');
+            }
         }
         
         function closePreview() {
@@ -557,24 +894,74 @@
         }
         
         // 保存和发布
-        function saveTemplate() {
+        async function saveTemplate() {
+            if (!templateId) return false;
+            
             const status = document.getElementById('saveStatus');
             status.textContent = '保存中...';
-            setTimeout(() => {
+            
+            // 收集画布数据
+            const components = [];
+            document.querySelectorAll('.canvas-component').forEach(el => {
+                components.push({
+                    id: el.dataset.id,
+                    type: el.dataset.type,
+                    x: parseInt(el.style.left),
+                    y: parseInt(el.style.top),
+                    w: parseInt(el.style.width),
+                    h: parseInt(el.style.height),
+                    z: parseInt(el.style.zIndex),
+                    props: JSON.parse(el.dataset.props || '{}')
+                });
+            });
+            
+            const config = {
+                canvas: {
+                    width: parseInt(canvas.style.width) || 1920,
+                    height: parseInt(canvas.style.height) || 1080,
+                    bg: canvas.style.background
+                },
+                components: components
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/${templateId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        name: document.getElementById('templateNameInput').value,
+                        config: JSON.stringify(config)
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Save failed');
+                
                 status.textContent = '已保存';
                 showToast('模板保存成功');
-            }, 1000);
+                return true;
+            } catch (error) {
+                console.error('Save error:', error);
+                status.textContent = '保存失败';
+                showToast('保存失败', 'error');
+                return false;
+            }
         }
         
         function publishTemplate() {
-            showToast('模板发布成功！');
+            // 实际应调用后端发布接口
+            saveTemplate().then(() => {
+                showToast('模板已发布！');
+            });
         }
         
         // Toast
-        function showToast(message) {
+        function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = 'toast';
+            toast.className = 'toast ' + (type === 'error' ? 'error' : '');
             toast.textContent = message;
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);

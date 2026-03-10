@@ -656,7 +656,7 @@
                 </div>
             </div>
             <div class="page-actions">
-                <button class="btn btn-secondary">
+                <button class="btn btn-secondary" onclick="importTemplate()">
                     <span>📥</span>
                     <span>导入</span>
                 </button>
@@ -692,202 +692,21 @@
             </div>
 
             <button class="filter-btn" onclick="filterTemplates('all')">全部</button>
-            <button class="filter-btn active" onclick="filterTemplates('published')">已发布</button>
-            <button class="filter-btn" onclick="filterTemplates('draft')">草稿</button>
-            <button class="filter-btn" onclick="filterTemplates('error')">异常</button>
+            <button class="filter-btn active" onclick="filterTemplates('', this)">全部</button>
+            <button class="filter-btn" onclick="filterTemplates('published', this)">已发布</button>
+            <button class="filter-btn" onclick="filterTemplates('draft', this)">草稿</button>
+            <button class="filter-btn" onclick="filterTemplates('error', this)">异常</button>
 
             <div class="view-toggle">
-                <button class="view-btn active" onclick="switchView('grid')" title="网格视图">▦</button>
-                <button class="view-btn" onclick="switchView('table')" title="列表视图">☰</button>
+                <button class="view-btn active" onclick="switchView('grid', this)" title="卡片视图">📱</button>
+                <button class="view-btn" onclick="switchView('table', this)" title="列表视图">☰</button>
             </div>
         </div>
 
         <!-- 模板网格视图 -->
         <div class="template-grid" id="templateGrid">
-            <div class="template-card" onclick="window.location.href='editor.html'">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg blue">📊</div>
-                    <span class="template-badge published">已发布</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览"
-                            onclick="event.stopPropagation(); previewTemplate('销售数据大屏')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑"
-                            onclick="event.stopPropagation(); editTemplate('销售数据大屏')">✎</button>
-                        <button class="template-overlay-btn" title="复制"
-                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">销售数据大屏</div>
-                    <div class="template-meta">
-                        <span>零售行业</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 1.2K</span>
-                            <span class="template-stat">🕐 2小时前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg green">📈</div>
-                    <span class="template-badge published">已发布</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览"
-                            onclick="event.stopPropagation(); previewTemplate('实时监控看板')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑"
-                            onclick="event.stopPropagation(); editTemplate('实时监控看板')">✎</button>
-                        <button class="template-overlay-btn" title="复制"
-                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">实时监控看板</div>
-                    <div class="template-meta">
-                        <span>运维监控</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 2.5K</span>
-                            <span class="template-stat">🕐 昨天</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg purple">💰</div>
-                    <span class="template-badge draft">草稿</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览"
-                            onclick="event.stopPropagation(); previewTemplate('财务分析报告')">👁️</button>
-                        <button class="template-overlay-btn" title="编辑"
-                            onclick="event.stopPropagation(); editTemplate('财务分析报告')">✎</button>
-                        <button class="template-overlay-btn" title="复制"
-                            onclick="event.stopPropagation(); showToast('success', '模板已复制')">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">财务分析报告</div>
-                    <div class="template-meta">
-                        <span>金融行业</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 856</span>
-                            <span class="template-stat">🕐 3天前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg orange">👥</div>
-                    <span class="template-badge error">异常</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览">👁️</button>
-                        <button class="template-overlay-btn" title="编辑">✎</button>
-                        <button class="template-overlay-btn" title="复制">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">用户行为分析</div>
-                    <div class="template-meta">
-                        <span>互联网</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 3.2K</span>
-                            <span class="template-stat">🕐 1周前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg cyan">🏭</div>
-                    <span class="template-badge published">已发布</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览">👁️</button>
-                        <button class="template-overlay-btn" title="编辑">✎</button>
-                        <button class="template-overlay-btn" title="复制">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">生产车间监控</div>
-                    <div class="template-meta">
-                        <span>生产制造</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 980</span>
-                            <span class="template-stat">🕐 5天前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg red">🎯</div>
-                    <span class="template-badge draft">草稿</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览">👁️</button>
-                        <button class="template-overlay-btn" title="编辑">✎</button>
-                        <button class="template-overlay-btn" title="复制">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">营销数据大屏</div>
-                    <div class="template-meta">
-                        <span>互联网</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 0</span>
-                            <span class="template-stat">🕐 今天</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg blue">🌐</div>
-                    <span class="template-badge published">已发布</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览">👁️</button>
-                        <button class="template-overlay-btn" title="编辑">✎</button>
-                        <button class="template-overlay-btn" title="复制">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">全球销售看板</div>
-                    <div class="template-meta">
-                        <span>零售</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 1.8K</span>
-                            <span class="template-stat">🕐 1周前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="template-card">
-                <div class="template-thumb">
-                    <div class="template-thumb-bg green">📞</div>
-                    <span class="template-badge published">已发布</span>
-                    <div class="template-overlay">
-                        <button class="template-overlay-btn" title="预览">👁️</button>
-                        <button class="template-overlay-btn" title="编辑">✎</button>
-                        <button class="template-overlay-btn" title="复制">📋</button>
-                    </div>
-                </div>
-                <div class="template-info">
-                    <div class="template-name">客服数据看板</div>
-                    <div class="template-meta">
-                        <span>服务行业</span>
-                        <div class="template-stats">
-                            <span class="template-stat">👁️ 654</span>
-                            <span class="template-stat">🕐 2周前</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- 动态加载中 -->
+            <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">加载中...</div>
         </div>
 
         <!-- 模板表格视图 -->
@@ -897,107 +716,25 @@
                     <tr>
                         <th>模板</th>
                         <th>行业</th>
-                        <th>创建时间</th>
-                        <th>访问量</th>
                         <th>状态</th>
+                        <th>访问量</th>
+                        <th>更新时间</th>
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="templateTableBody">
                     <tr>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="table-thumb blue">📊</div>
-                                <span class="table-name">销售数据大屏</span>
-                            </div>
-                        </td>
-                        <td>零售行业</td>
-                        <td>2024-01-15 10:30</td>
-                        <td>1,234</td>
-                        <td><span class="status-badge success"><span class="status-dot"></span>已发布</span></td>
-                        <td>
-                            <div class="table-btns">
-                                <button class="table-btn" onclick="previewTemplate('销售数据大屏')">👁️ 预览</button>
-                                <button class="table-btn" onclick="editTemplate('销售数据大屏')">✎ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteTemplate('销售数据大屏')">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="table-thumb green">📈</div>
-                                <span class="table-name">实时监控看板</span>
-                            </div>
-                        </td>
-                        <td>运维监控</td>
-                        <td>2024-01-12 14:20</td>
-                        <td>2,567</td>
-                        <td><span class="status-badge success"><span class="status-dot"></span>已发布</span></td>
-                        <td>
-                            <div class="table-btns">
-                                <button class="table-btn" onclick="previewTemplate('实时监控看板')">👁️ 预览</button>
-                                <button class="table-btn" onclick="editTemplate('实时监控看板')">✎ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteTemplate('实时监控看板')">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="table-thumb purple">💰</div>
-                                <span class="table-name">财务分析报告</span>
-                            </div>
-                        </td>
-                        <td>金融行业</td>
-                        <td>2024-01-10 09:15</td>
-                        <td>856</td>
-                        <td><span class="status-badge warning"><span class="status-dot"></span>草稿</span></td>
-                        <td>
-                            <div class="table-btns">
-                                <button class="table-btn" onclick="previewTemplate('财务分析报告')">👁️ 预览</button>
-                                <button class="table-btn" onclick="editTemplate('财务分析报告')">✎ 编辑</button>
-                                <button class="table-btn danger" onclick="deleteTemplate('财务分析报告')">🗑 删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="table-thumb orange">👥</div>
-                                <span class="table-name">用户行为分析</span>
-                            </div>
-                        </td>
-                        <td>互联网</td>
-                        <td>2024-01-08 16:45</td>
-                        <td>3,210</td>
-                        <td><span class="status-badge error"><span class="status-dot"></span>异常</span></td>
-                        <td>
-                            <div class="table-btns">
-                                <button class="table-btn">👁️ 预览</button>
-                                <button class="table-btn">✎ 编辑</button>
-                                <button class="table-btn danger">🗑 删除</button>
-                            </div>
-                        </td>
+                        <td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">加载中...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- 分页 -->
-        <div class="pagination">
-            <span class="pagination-info">共 128 条记录，第 1/13 页</span>
-            <div class="pagination-btns">
-                <button class="page-btn" disabled>上一页</button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <button class="page-btn">...</button>
-                <button class="page-btn">13</button>
-                <button class="page-btn">下一页</button>
-            </div>
-        </div>
+        <div id="paginationContainer"></div>
     </main>
+
+
 
     <!-- 新建模板模态框 -->
     <div class="modal-overlay" id="createModal">
@@ -1010,11 +747,11 @@
                 <div class="modal-form">
                     <div class="form-group">
                         <label class="form-label">模板名称 *</label>
-                        <input type="text" class="form-input" placeholder="请输入模板名称">
+                        <input type="text" id="newName" class="form-input" placeholder="请输入模板名称">
                     </div>
                     <div class="form-group">
                         <label class="form-label">所属行业 *</label>
-                        <select class="form-input">
+                        <select id="newIndustry" class="form-input">
                             <option value="">请选择行业</option>
                             <option value="retail">零售</option>
                             <option value="finance">金融</option>
@@ -1025,7 +762,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">模板描述</label>
-                        <textarea class="form-textarea" placeholder="请输入模板描述"></textarea>
+                        <textarea id="newDesc" class="form-textarea" placeholder="请输入模板描述"></textarea>
                     </div>
                 </div>
             </div>
@@ -1036,18 +773,141 @@
         </div>
     </div>
 
+
     <!-- Toast 容器 -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
+        const API_BASE = '/system/templates';
+        let currentTemplates = [];
+        let currentPage = 1;
+        let currentFilter = '';
+
+        // API 数据获取
+        async function fetchTemplates(page = 1) {
+            currentPage = page;
+            const statusFilter = currentFilter ? `&status=${currentFilter}` : '';
+            try {
+                const response = await fetch(`${API_BASE}?page=${page}&pageSize=12${statusFilter}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch templates');
+
+                const result = await response.json();
+                currentTemplates = result.list || [];
+                renderTemplates();
+
+                if (result.pagination) {
+                    window.adminLayout.renderPagination('paginationContainer', result.pagination, fetchTemplates);
+                }
+            } catch (error) {
+                console.error('Error fetching templates:', error);
+                window.showToast('加载模板列表失败', 'danger');
+            }
+        }
+
+        // 呈现模板
+        function renderTemplates() {
+            renderGridView();
+            renderTableView();
+        }
+
+        function renderGridView() {
+            const grid = document.getElementById('templateGrid');
+            if (currentTemplates.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">暂无模板数据</div>';
+                return;
+            }
+
+            grid.innerHTML = currentTemplates.map(t => `
+                <div class="template-card">
+                    <div class="template-thumb">
+                        <div class="template-thumb-bg ${t.color_theme}">
+                            ${t.thumbnail || '📄'}
+                        </div>
+                        <div class="template-actions">
+                            <button class="template-btn" onclick="previewTemplate(${t.id}, '${t.name}')">👁️ 预览</button>
+                            <button class="template-btn" onclick="editTemplate(${t.id}, '${t.name}')" data-perm="templates:update">✎ 编辑</button>
+                            <button class="template-btn" onclick="deleteTemplate(${t.id}, '${t.name}')" data-perm="templates:delete" style="color: #ff4d4f;">🗑️ 删除</button>
+                        </div>
+                    </div>
+                    <div class="template-info">
+                        <div class="template-header">
+                            <h3 class="template-title">${t.name}</h3>
+                            <span class="template-status ${t.status}">${t.status === 'published' ? '已发布' : t.status === 'draft' ? '草稿' : '异常'}</span>
+                        </div>
+                        <div class="template-meta">
+                            <span class="template-type">${formatIndustry(t.industry)}</span>
+                            <span class="template-views">👁️ ${t.views} 次使用</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // 重新绑定权限控制
+            if (window.adminLayout && typeof window.adminLayout.checkElementPermissions === 'function') {
+                window.adminLayout.checkElementPermissions(grid);
+            }
+        }
+
+        function renderTableView() {
+            const tbody = document.getElementById('templateTableBody');
+            if (!tbody) return; // In case the table body doesn't exist yet
+
+            if (currentTemplates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">暂无模板数据</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = currentTemplates.map(t => `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;" class="template-thumb-bg ${t.color_theme}">
+                                ${t.thumbnail || '📄'}
+                            </div>
+                            <span style="font-weight: 500; color: var(--text-dark);">${t.name}</span>
+                        </div>
+                    </td>
+                    <td><span class="template-type">${formatIndustry(t.industry)}</span></td>
+                    <td><span class="template-status ${t.status}">${t.status === 'published' ? '已发布' : t.status === 'draft' ? '草稿' : '异常'}</span></td>
+                    <td>${t.views}</td>
+                    <td style="color: var(--text-muted);">${new Date(t.updateTime).toLocaleString()}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="table-btn" onclick="previewTemplate(${t.id}, '${t.name}')">👁️ 预览</button>
+                            <button class="table-btn" onclick="editTemplate(${t.id}, '${t.name}')" data-perm="templates:update">✎ 编辑</button>
+                            <button class="table-btn danger" onclick="deleteTemplate(${t.id}, '${t.name}')" data-perm="templates:delete">🗑 删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 重新绑定权限控制
+            if (window.adminLayout && typeof window.adminLayout.checkElementPermissions === 'function') {
+                window.adminLayout.checkElementPermissions(tbody);
+            }
+        }
+
+        function formatIndustry(industry) {
+            const map = {
+                'retail': '零售',
+                'finance': '金融',
+                'manufacturing': '制造',
+                'internet': '互联网',
+                'operations': '运维',
+            };
+            return map[industry] || industry;
+        }
+
         // 视图切换
-        function switchView(view) {
+        function switchView(view, btnElement) {
             const gridView = document.getElementById('templateGrid');
             const tableView = document.getElementById('templateTable');
             const viewBtns = document.querySelectorAll('.view-btn');
 
             viewBtns.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            if (btnElement) btnElement.classList.add('active');
 
             if (view === 'grid') {
                 gridView.classList.remove('hide');
@@ -1059,12 +919,13 @@
         }
 
         // 筛选
-        function filterTemplates(status) {
+        function filterTemplates(status, btnElement) {
             const btns = document.querySelectorAll('.filter-btn');
             btns.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            if (btnElement) btnElement.classList.add('active');
 
-            // 这里可以添加实际的筛选逻辑
+            currentFilter = status;
+            fetchTemplates(1); // 重新加载第一页
         }
 
         // 模态框
@@ -1086,53 +947,121 @@
         });
 
         // 创建模板
-        function createTemplate() {
-            closeModal('createModal');
-            window.showToast('模板创建成功！');
+        async function createTemplate() {
+            const name = document.getElementById('newName').value;
+            const industry = document.getElementById('newIndustry').value;
+            const desc = document.getElementById('newDesc').value;
+
+            if (!name || !industry) {
+                window.showToast('请填写必填项', 'danger');
+                return;
+            }
+
+            const colors = ['blue', 'green', 'purple', 'orange', 'cyan', 'red'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            // 默认配置
+            const defaultConfig = {
+                canvas: { width: 1920, height: 1080, bg: 'linear-gradient(135deg, #0A0E27 0%, #1A1F3A 50%, #0D1225 100%)' },
+                components: []
+            };
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        industry,
+                        color_theme: randomColor,
+                        thumbnail: '📄', // Default icon
+                        config: JSON.stringify(defaultConfig) // Valid JSON config
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create template');
+
+                closeModal('createModal');
+                window.showToast('模板创建成功！');
+
+                // 清空表单
+                document.getElementById('newName').value = '';
+                document.getElementById('newIndustry').value = '';
+                document.getElementById('newDesc').value = '';
+
+                fetchTemplates(currentPage);
+            } catch (error) {
+                console.error('Create template error:', error);
+                window.showToast('创建模板失败', 'danger');
+            }
         }
 
-        // 初始渲染分页（静态演示）
+        // 初始加载
         document.addEventListener('DOMContentLoaded', () => {
-            if (window.adminLayout) {
-                window.adminLayout.renderPagination('paginationContainer', {
-                    total: 48,
-                    page: 1,
-                    pageSize: 12,
-                    totalPages: 4
-                }, (p) => {
-                    console.log('Jump to page:', p);
-                    window.showToast(`跳转到第 ${p} 页`);
-                });
-            }
+            fetchTemplates();
         });
 
         // 预览模板
-        function previewTemplate(name) {
+        function previewTemplate(id, name) {
             window.showToast(`正在打开「${name}」预览...`);
             setTimeout(() => {
-                if (name === '销售数据大屏') {
-                    window.open('../screen/sales-dashboard.html', '_blank');
-                } else if (name === '实时监控看板') {
-                    window.open('../screen/monitor-dashboard.html', '_blank');
-                } else if (name === '财务分析报告' || name === '数据分析看板') {
-                    window.open('../screen/analytics-dashboard.html', '_blank');
-                }
+                window.open(`preview.html?id=${id}`, '_blank');
             }, 500);
         }
 
         // 编辑模板
-        function editTemplate(name) {
+        function editTemplate(id, name) {
             window.showToast(`正在打开「${name}」编辑器...`);
             setTimeout(() => {
-                window.location.href = 'editor.html';
+                window.location.href = `editor.html?id=${id}`;
             }, 500);
         }
 
-        // 删除模板
-        function deleteTemplate(name) {
+        // 删除模板 (伪删除 / 软删除)
+        async function deleteTemplate(id, name) {
             if (confirm(`确定要删除模板「${name}」吗？此操作不可恢复。`)) {
-                window.showToast(`模板「${name}」已删除`);
+                try {
+                    const response = await fetch(`${API_BASE}/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to delete template');
+
+                    window.showToast(`模板「${name}」已删除`);
+                    fetchTemplates(currentPage);
+                } catch (error) {
+                    console.error('Delete template error:', error);
+                    window.showToast('删除模块失败', 'danger');
+                }
             }
+        }
+
+        // 导入模板 (模拟)
+        function importTemplate() {
+            // 创建一个隐藏的文件输入框
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                window.showToast(`正在导入 ${file.name}...`);
+                
+                // 模拟上传延迟
+                setTimeout(() => {
+                    window.showToast('导入成功！');
+                    // 刷新列表 (实际应在上传成功后)
+                    fetchTemplates(currentPage);
+                }, 1500);
+            };
+            
+            input.click();
         }
     </script>
 </body>

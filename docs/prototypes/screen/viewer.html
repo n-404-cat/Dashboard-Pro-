@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大屏预览 - Dashboard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0D1117; 
+            color: white; 
+            font-family: "PingFang SC", sans-serif; 
+            overflow: hidden; 
+            width: 100vw; 
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #stage {
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            transform-origin: center center;
+        }
+
+        .component {
+            position: absolute;
+            overflow: hidden;
+        }
+
+        /* 简单的组件样式 */
+        .comp-chart { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
+        .comp-title { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 8px; padding-left: 8px; border-left: 3px solid #00D4FF; }
+        .comp-body { flex: 1; display: flex; align-items: flex-end; justify-content: space-around; }
+        .comp-bar { width: 20%; background: linear-gradient(0deg, #00D4FF 0%, rgba(0,212,255,0.2) 100%); border-radius: 4px 4px 0 0; transition: height 1s ease; }
+        
+        .comp-text { display: flex; align-items: center; justify-content: center; text-align: center; }
+        
+        .comp-image img { width: 100%; height: 100%; object-fit: cover; }
+
+        .loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0D1117; display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .error { color: #ff4d4f; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">加载中...</div>
+    <div id="stage"></div>
+
+    <script>
+        const API_BASE = '/system/templates';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            
+            if (!id) {
+                showError('未指定模板 ID');
+                return;
+            }
+            
+            loadTemplate(id);
+            window.addEventListener('resize', fitScreen);
+        });
+
+        async function loadTemplate(id) {
+            try {
+                const token = localStorage.getItem('access_token'); // Assuming shared domain/storage
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                
+                const response = await fetch(`${API_BASE}/${id}`, { headers });
+                if (!response.ok) throw new Error('无法加载模板数据');
+                
+                const template = await response.json();
+                if (template.config) {
+                    const config = JSON.parse(template.config);
+                    renderStage(config);
+                } else {
+                    showError('模板配置为空');
+                }
+            } catch (error) {
+                console.error(error);
+                showError('加载失败: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderStage(config) {
+            const stage = document.getElementById('stage');
+            const canvasConfig = config.canvas || { width: 1920, height: 1080, bg: '#0D1117' };
+            
+            // 设置舞台尺寸
+            stage.style.width = canvasConfig.width + 'px';
+            stage.style.height = canvasConfig.height + 'px';
+            stage.style.background = canvasConfig.bg;
+            
+            // 渲染组件
+            if (config.components) {
+                config.components.forEach(comp => {
+                    const el = document.createElement('div');
+                    el.className = 'component';
+                    Object.assign(el.style, {
+                        left: comp.x + 'px',
+                        top: comp.y + 'px',
+                        width: comp.w + 'px',
+                        height: comp.h + 'px',
+                        zIndex: comp.z || 1
+                    });
+                    
+                    renderComponentContent(el, comp);
+                    stage.appendChild(el);
+                });
+            }
+            
+            // 初始适配屏幕
+            window.stageWidth = canvasConfig.width;
+            window.stageHeight = canvasConfig.height;
+            fitScreen();
+        }
+
+        function renderComponentContent(el, comp) {
+            const props = comp.props || {};
+            const type = comp.type;
+
+            if (type === 'html') {
+                el.innerHTML = props.html || '<div style="color:#666">HTML Component</div>';
+            } else if (type.includes('chart')) {
+                // 简单模拟图表
+                el.innerHTML = `
+                    <div class="comp-chart" style="width:100%;height:100%">
+                        <div class="comp-title">${props.title || '图表'}</div>
+                        <div class="comp-body">
+                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
+                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
+                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
+                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'text') {
+                el.innerHTML = `<div class="comp-text" style="width:100%;height:100%;color:${props.color || '#fff'};font-size:${props.fontSize || '24px'};justify-content:${props.align || 'center'}">${props.text || '文本'}</div>`;
+            } else if (type === 'image') {
+                el.innerHTML = `<div class="comp-image" style="width:100%;height:100%"><img src="${props.src || 'https://via.placeholder.com/200'}" alt="img"></div>`;
+            } else {
+                el.innerHTML = `<div style="border:1px dashed #666;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888">${type}</div>`;
+            }
+        }
+
+        function fitScreen() {
+            if (!window.stageWidth) return;
+            const stage = document.getElementById('stage');
+            const scaleX = window.innerWidth / window.stageWidth;
+            const scaleY = window.innerHeight / window.stageHeight;
+            const scale = Math.min(scaleX, scaleY); // 保持比例适应
+            
+            stage.style.transform = `scale(${scale})`;
+        }
+
+        function showError(msg) {
+            const loading = document.getElementById('loading');
+            loading.innerHTML = `<div class="error">${msg}</div>`;
+            loading.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
