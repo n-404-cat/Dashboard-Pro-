@@ -222,15 +222,7 @@
             if (type === 'html') {
                 el.innerHTML = props.html || '';
             } else if (type.includes('chart')) {
-                el.innerHTML = `
-                    <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
-                        <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${props.title || '图表组件'}</div>
-                        <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px)">
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 60%;"></div>
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 80%;"></div>
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 45%;"></div>
-                        </div>
-                    </div>`;
+                renderChartComponent(el, props);
             } else if (type === 'text') {
                 el.innerHTML = `<div style="width:100%;white-space:pre-wrap;">${props.text || '文本内容'}</div>`;
             } else if (type === 'image') {
@@ -242,6 +234,161 @@
             } else {
                 el.innerHTML = `<div class="comp-content" style="border:1px dashed #666;color:#aaa;">${type}</div>`;
             }
+        }
+
+        function renderChartComponent(el, props) {
+            const binding = props.dataBinding || {};
+            const title = props.title || '图表组件';
+
+            if (binding.mode === 'api' && binding.apiId) {
+                el.innerHTML = buildChartMarkup(title, [], '加载中...');
+                fetchAndRenderApiSeries(el, title, binding);
+                return;
+            }
+
+            if (binding.mode === 'datasource' && binding.datasourceId) {
+                el.innerHTML = buildChartMarkup(title, [], '加载中...');
+                fetchAndRenderDatasourceSeries(el, title, binding);
+                return;
+            }
+
+            if (binding.mode === 'static' && binding.staticData) {
+                try {
+                    const series = normalizeToSeries(JSON.parse(binding.staticData));
+                    el.innerHTML = buildChartMarkup(title, series);
+                } catch {
+                    el.innerHTML = buildChartMarkup(title, [], '静态数据格式错误');
+                }
+                return;
+            }
+
+            el.innerHTML = buildChartMarkup(title, [], '未配置数据');
+        }
+
+        async function fetchAndRenderDatasourceSeries(el, title, binding) {
+            try {
+                const dsId = binding.datasourceId;
+                const params = parseMaybeJson(binding.params);
+                const queryType = binding.queryType || 'query';
+                const queryContent = binding.queryContent || '';
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/system/data-sources/${dsId}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ queryType, queryContent, params })
+                });
+
+                if (!response.ok) {
+                    el.innerHTML = buildChartMarkup(title, [], `请求失败(${response.status})`);
+                    return;
+                }
+
+                const result = await response.json();
+                if (!result?.success) {
+                    el.innerHTML = buildChartMarkup(title, [], result?.message || '数据加载失败');
+                    return;
+                }
+
+                const series = normalizeToSeries(result.data);
+                el.innerHTML = buildChartMarkup(title, series);
+            } catch {
+                el.innerHTML = buildChartMarkup(title, [], '数据加载异常');
+            }
+        }
+
+        async function fetchAndRenderApiSeries(el, title, binding) {
+            try {
+                const apiId = binding.apiId;
+                const params = parseMaybeJson(binding.params);
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/system/apis/${apiId}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ params })
+                });
+
+                if (!response.ok) {
+                    el.innerHTML = buildChartMarkup(title, [], `请求失败(${response.status})`);
+                    return;
+                }
+
+                const result = await response.json();
+                if (!result?.success) {
+                    el.innerHTML = buildChartMarkup(title, [], result?.message || '数据加载失败');
+                    return;
+                }
+
+                const series = normalizeToSeries(result.data);
+                el.innerHTML = buildChartMarkup(title, series);
+            } catch {
+                el.innerHTML = buildChartMarkup(title, [], '数据加载异常');
+            }
+        }
+
+        function buildChartMarkup(title, series, statusText) {
+            const safeSeries = Array.isArray(series) ? series : [];
+            const max = safeSeries.length ? Math.max(...safeSeries.map(i => Number(i.value) || 0), 1) : 1;
+            const bars = safeSeries.length ? safeSeries.slice(0, 6).map(item => {
+                const value = Number(item.value) || 0;
+                const height = Math.max(4, Math.round((value / max) * 100));
+                const label = item.label ?? '';
+                return `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:18%">
+                        <div class="chart-bar" style="width:100%;height:${height}%"></div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${escapeHtml(String(label))}</div>
+                    </div>
+                `;
+            }).join('') : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:12px;">${escapeHtml(statusText || '')}</div>`;
+
+            return `
+                <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
+                    <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${escapeHtml(String(title))}</div>
+                    <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px);gap:10px">
+                        ${bars}
+                    </div>
+                </div>
+            `;
+        }
+
+        function parseMaybeJson(value) {
+            if (!value) return undefined;
+            if (typeof value === 'object') return value;
+            const str = String(value).trim();
+            if (!str) return undefined;
+            try { return JSON.parse(str); } catch { return undefined; }
+        }
+
+        function normalizeToSeries(data) {
+            if (Array.isArray(data)) {
+                if (data.length === 0) return [];
+                if (typeof data[0] === 'number') return data.map((v, idx) => ({ label: String(idx + 1), value: v }));
+                if (typeof data[0] === 'object' && data[0] !== null) {
+                    return data.map((row, idx) => {
+                        const obj = row;
+                        const labelKey = ['label', 'name', 'date'].find(k => k in obj) || Object.keys(obj)[0] || 'label';
+                        const valueKey = ['value', 'count', 'total', 'sum'].find(k => k in obj) || Object.keys(obj).find(k => typeof obj[k] === 'number') || Object.keys(obj)[1] || 'value';
+                        const label = obj[labelKey] ?? String(idx + 1);
+                        const value = Number(obj[valueKey]) || 0;
+                        return { label, value };
+                    });
+                }
+                return [];
+            }
+            if (data && typeof data === 'object') {
+                if (Array.isArray(data.list)) return normalizeToSeries(data.list);
+                if (Array.isArray(data.data)) return normalizeToSeries(data.data);
+            }
+            if (typeof data === 'number') return [{ label: '值', value: data }];
+            return [];
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
         }
 
         // 缩放功能

@@ -437,9 +437,13 @@
     
     <script>
         const API_BASE = '/system/templates';
+        const APIS_BASE = '/system/apis';
+        const DATASOURCES_BASE = '/system/data-sources';
         let templateId = null;
         let scale = 100;
         let selectedComponent = null;
+        let availableApis = [];
+        let availableDatasources = [];
         // 用于画布内拖拽
         let isDraggingComponent = false;
         let dragOffset = { x: 0, y: 0 };
@@ -456,7 +460,33 @@
             }
             
             loadTemplate(templateId);
+            loadAvailableApis();
+            loadAvailableDatasources();
         });
+
+        async function loadAvailableApis() {
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const response = await fetch(`${APIS_BASE}?page=1&pageSize=200`, { headers });
+                if (!response.ok) return;
+                const result = await response.json();
+                availableApis = result.list || [];
+            } catch {
+            }
+        }
+
+        async function loadAvailableDatasources() {
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const response = await fetch(`${DATASOURCES_BASE}?page=1&pageSize=200&status=1`, { headers });
+                if (!response.ok) return;
+                const result = await response.json();
+                availableDatasources = result.list || [];
+            } catch {
+            }
+        }
 
         // 加载模板数据
         async function loadTemplate(id) {
@@ -633,15 +663,8 @@
             if (type === 'html') {
                 el.innerHTML = props.html || '<div style="width:100%;height:100%;border:1px dashed #666;display:flex;align-items:center;justify-content:center;color:#888">自定义HTML (双击编辑)</div>';
             } else if (type.includes('chart')) {
-                el.innerHTML = `
-                    <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
-                        <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${props.title || '图表组件'}</div>
-                        <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px)">
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 60%;"></div>
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 80%;"></div>
-                            <div class="chart-bar" style="width:20%;background:#00D4FF;height: 45%;"></div>
-                        </div>
-                    </div>`;
+                const series = getChartSeriesFromProps(props);
+                el.innerHTML = buildChartMarkup(props.title || '图表组件', series);
             } else if (type === 'text') {
                 el.innerHTML = `<div style="width:100%;white-space:pre-wrap;">${props.text || '文本内容'}</div>`;
             } else if (type === 'image') {
@@ -653,6 +676,80 @@
             } else {
                 el.innerHTML = `<div class="comp-content" style="border:1px dashed #666;color:#aaa;">${type}</div>`;
             }
+        }
+
+        function buildChartMarkup(title, series, statusText) {
+            const safeSeries = Array.isArray(series) ? series : [];
+            const max = safeSeries.length ? Math.max(...safeSeries.map(i => Number(i.value) || 0), 1) : 1;
+            const bars = safeSeries.length ? safeSeries.slice(0, 6).map(item => {
+                const value = Number(item.value) || 0;
+                const height = Math.max(4, Math.round((value / max) * 100));
+                const label = item.label ?? '';
+                return `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:18%">
+                        <div class="chart-bar" style="width:100%;background:#00D4FF;height:${height}%;border-radius:4px 4px 0 0;"></div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${escapeHtml(String(label))}</div>
+                    </div>
+                `;
+            }).join('') : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:12px;">${escapeHtml(statusText || '未配置数据')}</div>`;
+
+            return `
+                <div class="sample-chart" style="width:100%;height:100%;overflow:hidden;padding:10px;background:rgba(255,255,255,0.05)">
+                    <div class="chart-title" style="margin-bottom:10px;border-left:3px solid #00D4FF;padding-left:8px">${escapeHtml(title)}</div>
+                    <div class="chart-bars" style="display:flex;align-items:flex-end;justify-content:space-around;height:calc(100% - 30px);gap:10px">
+                        ${bars}
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function getChartSeriesFromProps(props) {
+            const binding = props?.dataBinding;
+            if (binding?.mode === 'static') {
+                const raw = binding.staticData;
+                if (!raw) return [];
+                try {
+                    const parsed = JSON.parse(raw);
+                    return normalizeToSeries(parsed);
+                } catch {
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        function normalizeToSeries(data) {
+            if (Array.isArray(data)) {
+                if (data.length === 0) return [];
+                if (typeof data[0] === 'number') {
+                    return data.map((v, idx) => ({ label: String(idx + 1), value: v }));
+                }
+                if (typeof data[0] === 'object' && data[0] !== null) {
+                    return data.map((row, idx) => {
+                        const obj = row;
+                        const labelKey = ['label', 'name', 'date'].find(k => k in obj) || Object.keys(obj)[0] || 'label';
+                        const valueKey = ['value', 'count', 'total', 'sum'].find(k => k in obj) || Object.keys(obj).find(k => typeof obj[k] === 'number') || Object.keys(obj)[1] || 'value';
+                        const label = obj[labelKey] ?? String(idx + 1);
+                        const value = Number(obj[valueKey]) || 0;
+                        return { label, value };
+                    });
+                }
+            }
+            if (data && typeof data === 'object') {
+                if (Array.isArray(data.list)) return normalizeToSeries(data.list);
+                if (Array.isArray(data.data)) return normalizeToSeries(data.data);
+            }
+            if (typeof data === 'number') return [{ label: '值', value: data }];
+            return [];
         }
 
         // 更新属性面板
@@ -723,10 +820,103 @@
                     </div>
                 `;
             } else if (type.includes('chart')) {
-                 specificHtml += `
+                const binding = props.dataBinding || {};
+                const mode = binding.mode || 'static';
+                const staticData = binding.staticData || JSON.stringify([
+                    { label: 'A', value: 12 },
+                    { label: 'B', value: 36 },
+                    { label: 'C', value: 24 }
+                ], null, 2);
+                const apiId = binding.apiId || '';
+                const refreshMs = binding.refreshMs ?? 0;
+                const params = binding.params || '{}';
+                const datasourceId = binding.datasourceId || '';
+                const queryType = binding.queryType || 'query';
+                const queryContent = binding.queryContent || '';
+
+                const apiOptions = ['<option value="">选择接口</option>'].concat(
+                    availableApis.map(a => `<option value="${a.id}" ${String(a.id) === String(apiId) ? 'selected' : ''}>${escapeHtml(a.name || ('API ' + a.id))}</option>`)
+                ).join('');
+
+                const dsOptions = ['<option value="">选择数据源</option>'].concat(
+                    availableDatasources.map(ds => `<option value="${ds.id}" ${String(ds.id) === String(datasourceId) ? 'selected' : ''}>${escapeHtml(ds.name || ('DS ' + ds.id))} (${escapeHtml(ds.sourceType || '')})</option>`)
+                ).join('');
+
+                specificHtml += `
                     <div class="property-group">
                         <div class="group-title">图表标题</div>
-                        <input type="text" class="prop-data-input" data-prop="title" value="${props.title || ''}" style="width:100%">
+                        <input type="text" class="prop-data-input" data-prop="title" value="${escapeHtml(props.title || '')}" style="width:100%">
+                    </div>
+                    <div class="property-group">
+                        <div class="group-title">数据绑定</div>
+                        <div class="property-row">
+                            <label>模式</label>
+                            <select class="prop-data-input" data-prop="dataBinding.mode" style="width:100%">
+                                <option value="static" ${mode === 'static' ? 'selected' : ''}>静态数据</option>
+                                <option value="api" ${mode === 'api' ? 'selected' : ''}>接口配置(API)</option>
+                                <option value="datasource" ${mode === 'datasource' ? 'selected' : ''}>数据源(SQL/API)</option>
+                            </select>
+                        </div>
+
+                        <div id="chartBindApiBlock" style="display:${mode === 'api' ? 'block' : 'none'}">
+                            <div class="property-row" style="margin-top:10px">
+                                <label>接口</label>
+                                <select class="prop-data-input" data-prop="dataBinding.apiId" style="width:100%">
+                                    ${apiOptions}
+                                </select>
+                            </div>
+                            <div class="property-row" style="margin-top:10px">
+                                <label>刷新(ms)</label>
+                                <input type="number" class="prop-data-input" data-prop="dataBinding.refreshMs" value="${escapeHtml(String(refreshMs))}" style="width:100%" placeholder="0 表示不刷新">
+                            </div>
+                            <div class="property-group" style="margin-top:10px">
+                                <div class="property-label">参数(JSON)</div>
+                                <textarea class="prop-data-input" data-prop="dataBinding.params" rows="5" style="width:100%;background:#333;color:#fff;border:1px solid #444;font-family:monospace;font-size:12px;">${escapeHtml(String(params))}</textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:10px">
+                                <button class="tool-btn" style="flex:1;justify-content:center" onclick="testSelectedComponentData()">🔗 测试数据</button>
+                                <button class="tool-btn" style="flex:1;justify-content:center" onclick="window.open('apis.html','_blank')">⚙️ 管理接口</button>
+                            </div>
+                        </div>
+
+                        <div id="chartBindDsBlock" style="display:${mode === 'datasource' ? 'block' : 'none'}">
+                            <div class="property-row" style="margin-top:10px">
+                                <label>数据源</label>
+                                <select class="prop-data-input" data-prop="dataBinding.datasourceId" style="width:100%">
+                                    ${dsOptions}
+                                </select>
+                            </div>
+                            <div class="property-row" style="margin-top:10px">
+                                <label>类型</label>
+                                <select class="prop-data-input" data-prop="dataBinding.queryType" style="width:100%">
+                                    <option value="query" ${queryType === 'query' ? 'selected' : ''}>SQL查询</option>
+                                    <option value="api" ${queryType === 'api' ? 'selected' : ''}>API请求</option>
+                                </select>
+                            </div>
+                            <div class="property-group" style="margin-top:10px">
+                                <div class="property-label">内容</div>
+                                <textarea class="prop-data-input" data-prop="dataBinding.queryContent" rows="6" style="width:100%;background:#333;color:#fff;border:1px solid #444;font-family:monospace;font-size:12px;">${escapeHtml(String(queryContent))}</textarea>
+                            </div>
+                            <div class="property-row" style="margin-top:10px">
+                                <label>刷新(ms)</label>
+                                <input type="number" class="prop-data-input" data-prop="dataBinding.refreshMs" value="${escapeHtml(String(refreshMs))}" style="width:100%" placeholder="0 表示不刷新">
+                            </div>
+                            <div class="property-group" style="margin-top:10px">
+                                <div class="property-label">参数(JSON)</div>
+                                <textarea class="prop-data-input" data-prop="dataBinding.params" rows="5" style="width:100%;background:#333;color:#fff;border:1px solid #444;font-family:monospace;font-size:12px;">${escapeHtml(String(params))}</textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:10px">
+                                <button class="tool-btn" style="flex:1;justify-content:center" onclick="testSelectedComponentData()">🔗 测试数据</button>
+                                <button class="tool-btn" style="flex:1;justify-content:center" onclick="window.open('datasources.html','_blank')">⚙️ 管理数据源</button>
+                            </div>
+                        </div>
+
+                        <div id="chartBindStaticBlock" style="display:${mode === 'static' ? 'block' : 'none'}">
+                            <div class="property-group" style="margin-top:10px">
+                                <div class="property-label">静态数据(JSON)</div>
+                                <textarea class="prop-data-input" data-prop="dataBinding.staticData" rows="8" style="width:100%;background:#333;color:#0f0;border:1px solid #444;font-family:monospace;font-size:12px;">${escapeHtml(String(staticData))}</textarea>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
@@ -748,16 +938,141 @@
             
             // 数据属性输入
             document.querySelectorAll('.prop-data-input').forEach(input => {
-                input.addEventListener('input', function() {
+                const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+                input.addEventListener(eventName, function() {
                     const propKey = this.dataset.prop;
                     const props = JSON.parse(el.dataset.props || '{}');
-                    props[propKey] = this.value;
+
+                    const value = coerceInputValue(this);
+                    setNestedProp(props, propKey, value);
                     el.dataset.props = JSON.stringify(props);
-                    
-                    // 重新渲染内容
+
+                    if (propKey === 'dataBinding.mode') {
+                        updatePropertyPanel(el);
+                        return;
+                    }
+
                     renderComponentContent(el, el.dataset.type, props);
                 });
             });
+        }
+
+        function coerceInputValue(input) {
+            if (input.type === 'number') {
+                const n = Number(input.value);
+                return Number.isFinite(n) ? n : 0;
+            }
+            return input.value;
+        }
+
+        function setNestedProp(obj, path, value) {
+            if (!path) return;
+            if (!path.includes('.')) {
+                obj[path] = value;
+                return;
+            }
+            const parts = path.split('.');
+            let cur = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                const key = parts[i];
+                if (!cur[key] || typeof cur[key] !== 'object') cur[key] = {};
+                cur = cur[key];
+            }
+            cur[parts[parts.length - 1]] = value;
+        }
+
+        async function testSelectedComponentData() {
+            if (!selectedComponent) {
+                showToast('请先选中一个组件', 'error');
+                return;
+            }
+
+            if (!selectedComponent.dataset.type?.includes('chart')) {
+                showToast('仅图表组件支持数据测试', 'error');
+                return;
+            }
+
+            const props = JSON.parse(selectedComponent.dataset.props || '{}');
+            const binding = props.dataBinding || {};
+            if (binding.mode === 'static') {
+                renderComponentContent(selectedComponent, selectedComponent.dataset.type, props);
+                showToast('已使用静态数据');
+                return;
+            }
+
+            if (binding.mode !== 'api' && binding.mode !== 'datasource') {
+                showToast('请先配置数据绑定', 'error');
+                return;
+            }
+
+            selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], '加载中...');
+
+            try {
+                let params;
+                try { params = binding.params ? JSON.parse(String(binding.params)) : undefined; } catch { params = undefined; }
+
+                const token = localStorage.getItem('access_token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                };
+
+                let response;
+                if (binding.mode === 'api') {
+                    if (!binding.apiId) {
+                        showToast('请选择接口', 'error');
+                        selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], '未选择接口');
+                        return;
+                    }
+                    response = await fetch(`${APIS_BASE}/${binding.apiId}/test`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ params })
+                    });
+                } else {
+                    if (!binding.datasourceId) {
+                        showToast('请选择数据源', 'error');
+                        selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], '未选择数据源');
+                        return;
+                    }
+                    if (!binding.queryContent) {
+                        showToast('请填写内容', 'error');
+                        selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], '未填写内容');
+                        return;
+                    }
+                    response = await fetch(`${DATASOURCES_BASE}/${binding.datasourceId}/execute`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            queryType: binding.queryType || 'query',
+                            queryContent: binding.queryContent,
+                            params
+                        })
+                    });
+                }
+
+                if (!response.ok) {
+                    selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], `请求失败(${response.status})`);
+                    showToast('数据测试失败', 'error');
+                    return;
+                }
+
+                const result = await response.json();
+                const ok = binding.mode === 'datasource' ? result?.success : result?.success;
+                if (!ok) {
+                    selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], result?.message || '数据加载失败');
+                    showToast('数据测试失败', 'error');
+                    return;
+                }
+
+                const data = binding.mode === 'datasource' ? result.data : result.data;
+                const series = normalizeToSeries(data);
+                selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', series);
+                showToast('数据加载成功');
+            } catch {
+                selectedComponent.innerHTML = buildChartMarkup(props.title || '图表组件', [], '数据加载异常');
+                showToast('数据测试异常', 'error');
+            }
         }
 
 
@@ -794,53 +1109,58 @@
             selectComponent(null);
         });
         
-        // 拖拽添加新组件
         let draggedType = null;
-        document.querySelectorAll('.component-item').forEach(item => {
-            item.addEventListener('dragstart', function(e) {
-                draggedType = this.dataset.type;
-                e.dataTransfer.effectAllowed = 'copy';
-                e.dataTransfer.setData('text/plain', draggedType); // Ensure data is carried
-            });
-        });
-        
         const canvas = document.getElementById('canvas');
         const canvasWrapper = document.querySelector('.canvas-wrapper');
-        
-        // 绑定到 wrapper 以扩大拖放区域
-        canvasWrapper.addEventListener('dragover', e => {
-            e.preventDefault(); // Essential for drop
-            e.dataTransfer.dropEffect = 'copy';
-        });
-        
-        canvasWrapper.addEventListener('drop', function(e) {
-            e.preventDefault();
-            // Try getting type from variable or dataTransfer
-            const type = draggedType || e.dataTransfer.getData('text/plain');
-            
-            if (type) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleFactor = scale / 100;
-                // 计算相对于 canvas 的坐标
-                const x = (e.clientX - rect.left) / scaleFactor;
-                const y = (e.clientY - rect.top) / scaleFactor;
-                
-                // 创建组件数据
-                const newCompData = {
-                    type: type,
-                    x: Math.round(x - 100), // 居中放置 (假设宽200)
-                    y: Math.round(y - 75),  // 居中放置 (假设高150)
-                    w: 200,
-                    h: 150,
-                    props: { title: '新组件' }
-                };
-                
-                const el = createCanvasComponent(newCompData);
-                selectComponent(el);
-                showToast('组件已添加');
-                draggedType = null;
+
+        document.addEventListener('dragstart', (e) => {
+            const item = e.target?.closest?.('.component-item');
+            if (!item) return;
+            draggedType = item.dataset.type;
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('text/plain', draggedType);
             }
         });
+
+        document.addEventListener('dragend', () => {
+            draggedType = null;
+        });
+
+        function handleCanvasDragOver(e) {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        }
+
+        function handleCanvasDrop(e) {
+            e.preventDefault();
+            const type = draggedType || (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '');
+            if (!type) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleFactor = scale / 100;
+            const x = (e.clientX - rect.left) / scaleFactor;
+            const y = (e.clientY - rect.top) / scaleFactor;
+
+            const newCompData = {
+                type,
+                x: Math.round(x - 100),
+                y: Math.round(y - 75),
+                w: 200,
+                h: 150,
+                props: { title: '新组件' }
+            };
+
+            const el = createCanvasComponent(newCompData);
+            selectComponent(el);
+            showToast('组件已添加');
+            draggedType = null;
+        }
+
+        canvasWrapper.addEventListener('dragover', handleCanvasDragOver);
+        canvasWrapper.addEventListener('drop', handleCanvasDrop);
+        canvas.addEventListener('dragover', handleCanvasDragOver);
+        canvas.addEventListener('drop', handleCanvasDrop);
         
         // 操作功能
         function undo() { showToast('撤销功能开发中'); }

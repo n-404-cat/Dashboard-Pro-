@@ -52,4 +52,25 @@ export class DatasourcesController {
     async testConnection(@Param('id') id: string) {
         return await this.datasourcesService.testConnection(+id);
     }
+
+    @Post(':id/execute')
+    @Permissions('datasources:test')
+    async execute(@Param('id') id: string, @Body() body: { queryType?: string; queryContent?: string; params?: any }) {
+        try {
+            const datasource = await this.datasourcesService.findOne(+id);
+            const queryType = body?.queryType || (datasource.sourceType === 'api' ? 'api' : 'query');
+            const queryContent = body?.queryContent || '';
+
+            if (queryType === 'api' || datasource.sourceType === 'api') {
+                const data = await this.datasourcesService.executeApi(+id, queryContent, body?.params);
+                return { success: true, data };
+            }
+
+            const sqlParams = Array.isArray(body?.params) ? body.params : (body?.params ? Object.values(body.params) : []);
+            const data = await this.datasourcesService.executeQuery(+id, queryContent, sqlParams);
+            return { success: true, data };
+        } catch (error: any) {
+            return { success: false, message: error?.message || 'Execute failed' };
+        }
+    }
 }

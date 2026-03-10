@@ -127,26 +127,200 @@
 
             if (type === 'html') {
                 el.innerHTML = props.html || '<div style="color:#666">HTML Component</div>';
-            } else if (type.includes('chart')) {
-                // 简单模拟图表
-                el.innerHTML = `
-                    <div class="comp-chart" style="width:100%;height:100%">
-                        <div class="comp-title">${props.title || '图表'}</div>
-                        <div class="comp-body">
-                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
-                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
-                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
-                            <div class="comp-bar" style="height: ${Math.random() * 80 + 20}%"></div>
-                        </div>
+                return;
+            }
+
+            if (type.includes('chart')) {
+                renderChartComponent(el, props);
+                return;
+            }
+
+            if (type === 'text') {
+                el.innerHTML = `<div class="comp-text" style="width:100%;height:100%;color:${props.color || '#fff'};font-size:${props.fontSize || '24px'};justify-content:${props.align || 'center'}">${escapeHtml(props.text || '文本')}</div>`;
+                return;
+            }
+
+            if (type === 'image') {
+                const src = props.src || 'https://via.placeholder.com/200';
+                el.innerHTML = `<div class="comp-image" style="width:100%;height:100%"><img src="${escapeAttr(src)}" alt="img"></div>`;
+                return;
+            }
+
+            el.innerHTML = `<div style="border:1px dashed #666;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888">${escapeHtml(type)}</div>`;
+        }
+
+        function renderChartComponent(el, props) {
+            const binding = props.dataBinding || {};
+            const title = props.title || '图表';
+
+            if (binding.mode === 'api' && binding.apiId) {
+                el.innerHTML = buildChartMarkup(title, [], '加载中...');
+                const refreshMs = Number(binding.refreshMs) || 0;
+                fetchAndRenderApiSeries(el, title, binding);
+                if (refreshMs > 0) {
+                    setInterval(() => fetchAndRenderApiSeries(el, title, binding), refreshMs);
+                }
+                return;
+            }
+
+            if (binding.mode === 'datasource' && binding.datasourceId) {
+                el.innerHTML = buildChartMarkup(title, [], '加载中...');
+                const refreshMs = Number(binding.refreshMs) || 0;
+                fetchAndRenderDatasourceSeries(el, title, binding);
+                if (refreshMs > 0) {
+                    setInterval(() => fetchAndRenderDatasourceSeries(el, title, binding), refreshMs);
+                }
+                return;
+            }
+
+            if (binding.mode === 'static' && binding.staticData) {
+                try {
+                    const series = normalizeToSeries(JSON.parse(binding.staticData));
+                    el.innerHTML = buildChartMarkup(title, series);
+                } catch {
+                    el.innerHTML = buildChartMarkup(title, [], '静态数据格式错误');
+                }
+                return;
+            }
+
+            el.innerHTML = buildChartMarkup(title, [], '未配置数据');
+        }
+
+        async function fetchAndRenderDatasourceSeries(el, title, binding) {
+            try {
+                const dsId = binding.datasourceId;
+                const params = parseMaybeJson(binding.params);
+                const queryType = binding.queryType || 'query';
+                const queryContent = binding.queryContent || '';
+                const response = await fetch(`/system/data-sources/${dsId}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ queryType, queryContent, params })
+                });
+
+                if (!response.ok) {
+                    el.innerHTML = buildChartMarkup(title, [], `请求失败(${response.status})`);
+                    return;
+                }
+
+                const result = await response.json();
+                if (!result?.success) {
+                    el.innerHTML = buildChartMarkup(title, [], result?.message || '数据加载失败');
+                    return;
+                }
+
+                const series = normalizeToSeries(result.data);
+                el.innerHTML = buildChartMarkup(title, series);
+            } catch {
+                el.innerHTML = buildChartMarkup(title, [], '数据加载异常');
+            }
+        }
+
+        async function fetchAndRenderApiSeries(el, title, binding) {
+            try {
+                const apiId = binding.apiId;
+                const params = parseMaybeJson(binding.params);
+                const response = await fetch(`/system/apis/${apiId}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ params })
+                });
+
+                if (!response.ok) {
+                    el.innerHTML = buildChartMarkup(title, [], `请求失败(${response.status})`);
+                    return;
+                }
+
+                const result = await response.json();
+                if (!result?.success) {
+                    el.innerHTML = buildChartMarkup(title, [], result?.message || '数据加载失败');
+                    return;
+                }
+
+                const series = normalizeToSeries(result.data);
+                el.innerHTML = buildChartMarkup(title, series);
+            } catch {
+                el.innerHTML = buildChartMarkup(title, [], '数据加载异常');
+            }
+        }
+
+        function buildChartMarkup(title, series, statusText) {
+            const safeSeries = Array.isArray(series) ? series : [];
+            const max = safeSeries.length ? Math.max(...safeSeries.map(i => Number(i.value) || 0), 1) : 1;
+            const bars = safeSeries.length ? safeSeries.slice(0, 6).map(item => {
+                const value = Number(item.value) || 0;
+                const height = Math.max(4, Math.round((value / max) * 100));
+                const label = item.label ?? '';
+                return `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:18%">
+                        <div class="comp-bar" style="width:100%;height:${height}%"></div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${escapeHtml(String(label))}</div>
                     </div>
                 `;
-            } else if (type === 'text') {
-                el.innerHTML = `<div class="comp-text" style="width:100%;height:100%;color:${props.color || '#fff'};font-size:${props.fontSize || '24px'};justify-content:${props.align || 'center'}">${props.text || '文本'}</div>`;
-            } else if (type === 'image') {
-                el.innerHTML = `<div class="comp-image" style="width:100%;height:100%"><img src="${props.src || 'https://via.placeholder.com/200'}" alt="img"></div>`;
-            } else {
-                el.innerHTML = `<div style="border:1px dashed #666;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888">${type}</div>`;
+            }).join('') : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:12px;">${escapeHtml(statusText || '')}</div>`;
+
+            return `
+                <div class="comp-chart" style="width:100%;height:100%">
+                    <div class="comp-title">${escapeHtml(String(title))}</div>
+                    <div class="comp-body" style="gap:10px">
+                        ${bars}
+                    </div>
+                </div>
+            `;
+        }
+
+        function parseMaybeJson(value) {
+            if (!value) return undefined;
+            if (typeof value === 'object') return value;
+            const str = String(value).trim();
+            if (!str) return undefined;
+            try {
+                return JSON.parse(str);
+            } catch {
+                return undefined;
             }
+        }
+
+        function normalizeToSeries(data) {
+            if (Array.isArray(data)) {
+                if (data.length === 0) return [];
+                if (typeof data[0] === 'number') return data.map((v, idx) => ({ label: String(idx + 1), value: v }));
+                if (typeof data[0] === 'object' && data[0] !== null) {
+                    return data.map((row, idx) => {
+                        const obj = row;
+                        const labelKey = ['label', 'name', 'date'].find(k => k in obj) || Object.keys(obj)[0] || 'label';
+                        const valueKey = ['value', 'count', 'total', 'sum'].find(k => k in obj) || Object.keys(obj).find(k => typeof obj[k] === 'number') || Object.keys(obj)[1] || 'value';
+                        const label = obj[labelKey] ?? String(idx + 1);
+                        const value = Number(obj[valueKey]) || 0;
+                        return { label, value };
+                    });
+                }
+                return [];
+            }
+            if (data && typeof data === 'object') {
+                if (Array.isArray(data.list)) return normalizeToSeries(data.list);
+                if (Array.isArray(data.data)) return normalizeToSeries(data.data);
+            }
+            if (typeof data === 'number') return [{ label: '值', value: data }];
+            return [];
+        }
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('access_token');
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function escapeAttr(str) {
+            return escapeHtml(str);
         }
 
         function fitScreen() {

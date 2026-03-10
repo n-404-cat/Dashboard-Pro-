@@ -660,7 +660,7 @@
                     <span>📥</span>
                     <span>导入</span>
                 </button>
-                <button class="btn btn-primary" onclick="openModal('createModal')">
+                <button class="btn btn-primary" onclick="openCreateTemplate()">
                     <span>➕</span>
                     <span>新建模板</span>
                 </button>
@@ -740,11 +740,12 @@
     <div class="modal-overlay" id="createModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">新建模板</h3>
+                <h3 class="modal-title" id="createModalTitle">新建模板</h3>
                 <button class="modal-close" onclick="closeModal('createModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="modal-form">
+                    <input type="hidden" id="templateId">
                     <div class="form-group">
                         <label class="form-label">模板名称 *</label>
                         <input type="text" id="newName" class="form-input" placeholder="请输入模板名称">
@@ -761,6 +762,14 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">状态 *</label>
+                        <select id="newStatus" class="form-input">
+                            <option value="published">已发布</option>
+                            <option value="draft" selected>草稿</option>
+                            <option value="error">异常</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">模板描述</label>
                         <textarea id="newDesc" class="form-textarea" placeholder="请输入模板描述"></textarea>
                     </div>
@@ -768,7 +777,65 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
-                <button class="btn btn-primary" onclick="createTemplate()">创建模板</button>
+                <button class="btn btn-primary" id="saveTemplateBtn" onclick="saveTemplate()">创建模板</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal" style="max-width: 860px;">
+            <div class="modal-header">
+                <h3 class="modal-title">模板详情</h3>
+                <button class="modal-close" onclick="closeModal('detailModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">模板ID</label>
+                        <input type="text" class="form-input" id="detailId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <input type="text" class="form-input" id="detailStatus" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">模板名称</label>
+                        <input type="text" class="form-input" id="detailName" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">所属行业</label>
+                        <input type="text" class="form-input" id="detailIndustry" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">主题色</label>
+                        <input type="text" class="form-input" id="detailTheme" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">使用次数</label>
+                        <input type="text" class="form-input" id="detailViews" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">创建时间</label>
+                        <input type="text" class="form-input" id="detailCreateTime" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">更新时间</label>
+                        <input type="text" class="form-input" id="detailUpdateTime" readonly>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">配置（JSON）</label>
+                    <textarea class="form-textarea" id="detailConfig" readonly style="height: 220px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('detailModal')">关闭</button>
             </div>
         </div>
     </div>
@@ -825,10 +892,10 @@
                         <div class="template-thumb-bg ${t.color_theme}">
                             ${t.thumbnail || '📄'}
                         </div>
-                        <div class="template-actions">
-                            <button class="template-btn" onclick="previewTemplate(${t.id}, '${t.name}')">👁️ 预览</button>
-                            <button class="template-btn" onclick="editTemplate(${t.id}, '${t.name}')" data-perm="templates:update">✎ 编辑</button>
-                            <button class="template-btn" onclick="deleteTemplate(${t.id}, '${t.name}')" data-perm="templates:delete" style="color: #ff4d4f;">🗑️ 删除</button>
+                        <div class="template-overlay">
+                            <button class="template-overlay-btn" onclick="previewTemplate(${t.id}); event.stopPropagation();" title="预览">👁️</button>
+                            <button class="template-overlay-btn" onclick="editScreenTemplate(${t.id}); event.stopPropagation();" title="编辑大屏" data-perm="templates:update">🖥</button>
+                            <button class="template-overlay-btn" onclick="deleteTemplate(${t.id}); event.stopPropagation();" title="删除" data-perm="templates:delete">🗑</button>
                         </div>
                     </div>
                     <div class="template-info">
@@ -875,9 +942,11 @@
                     <td style="color: var(--text-muted);">${new Date(t.updateTime).toLocaleString()}</td>
                     <td>
                         <div class="table-actions">
-                            <button class="table-btn" onclick="previewTemplate(${t.id}, '${t.name}')">👁️ 预览</button>
-                            <button class="table-btn" onclick="editTemplate(${t.id}, '${t.name}')" data-perm="templates:update">✎ 编辑</button>
-                            <button class="table-btn danger" onclick="deleteTemplate(${t.id}, '${t.name}')" data-perm="templates:delete">🗑 删除</button>
+                            <button class="table-btn" onclick="viewTemplate(${t.id})">🔎 查看</button>
+                            <button class="table-btn" onclick="previewTemplate(${t.id})">👁️ 预览</button>
+                            <button class="table-btn" onclick="editScreenTemplate(${t.id})" data-perm="templates:update">🖥 编辑大屏</button>
+                            <button class="table-btn" onclick="editTemplateInfo(${t.id})" data-perm="templates:update">✎ 编辑信息</button>
+                            <button class="table-btn danger" onclick="deleteTemplate(${t.id})" data-perm="templates:delete">🗑 删除</button>
                         </div>
                     </td>
                 </tr>
@@ -937,6 +1006,17 @@
             document.getElementById(modalId).classList.remove('show');
         }
 
+        function openCreateTemplate() {
+            document.getElementById('templateId').value = '';
+            document.getElementById('newName').value = '';
+            document.getElementById('newIndustry').value = '';
+            document.getElementById('newStatus').value = 'draft';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('createModalTitle').textContent = '新建模板';
+            document.getElementById('saveTemplateBtn').textContent = '创建模板';
+            openModal('createModal');
+        }
+
         // 点击遮罩关闭模态框
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', function (e) {
@@ -947,9 +1027,11 @@
         });
 
         // 创建模板
-        async function createTemplate() {
+        async function saveTemplate() {
+            const id = document.getElementById('templateId').value;
             const name = document.getElementById('newName').value;
             const industry = document.getElementById('newIndustry').value;
+            const status = document.getElementById('newStatus').value;
             const desc = document.getElementById('newDesc').value;
 
             if (!name || !industry) {
@@ -957,45 +1039,61 @@
                 return;
             }
 
-            const colors = ['blue', 'green', 'purple', 'orange', 'cyan', 'red'];
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            
-            // 默认配置
-            const defaultConfig = {
-                canvas: { width: 1920, height: 1080, bg: 'linear-gradient(135deg, #0A0E27 0%, #1A1F3A 50%, #0D1225 100%)' },
-                components: []
-            };
-
             try {
-                const response = await fetch(API_BASE, {
-                    method: 'POST',
+                const isEdit = !!id;
+
+                let payload;
+                let url;
+                let method;
+
+                if (isEdit) {
+                    payload = { name, industry, status };
+                    url = `${API_BASE}/${id}`;
+                    method = 'PUT';
+                } else {
+                    const colors = ['blue', 'green', 'purple', 'orange', 'cyan', 'red'];
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    const defaultConfig = {
+                        canvas: { width: 1920, height: 1080, bg: 'linear-gradient(135deg, #0A0E27 0%, #1A1F3A 50%, #0D1225 100%)' },
+                        components: []
+                    };
+                    payload = {
+                        name,
+                        industry,
+                        status,
+                        color_theme: randomColor,
+                        thumbnail: '📄',
+                        config: JSON.stringify(defaultConfig)
+                    };
+                    url = API_BASE;
+                    method = 'POST';
+                }
+
+                const response = await fetch(url, {
+                    method,
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
                     },
-                    body: JSON.stringify({
-                        name,
-                        industry,
-                        color_theme: randomColor,
-                        thumbnail: '📄', // Default icon
-                        config: JSON.stringify(defaultConfig) // Valid JSON config
-                    })
+                    body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error('Failed to create template');
+                if (!response.ok) throw new Error(isEdit ? 'Failed to update template' : 'Failed to create template');
 
                 closeModal('createModal');
-                window.showToast('模板创建成功！');
+                window.showToast(isEdit ? '模板更新成功！' : '模板创建成功！');
 
                 // 清空表单
+                document.getElementById('templateId').value = '';
                 document.getElementById('newName').value = '';
                 document.getElementById('newIndustry').value = '';
+                document.getElementById('newStatus').value = 'draft';
                 document.getElementById('newDesc').value = '';
 
                 fetchTemplates(currentPage);
             } catch (error) {
-                console.error('Create template error:', error);
-                window.showToast('创建模板失败', 'danger');
+                console.error('Save template error:', error);
+                window.showToast('保存模板失败', 'danger');
             }
         }
 
@@ -1005,24 +1103,91 @@
         });
 
         // 预览模板
-        function previewTemplate(id, name) {
-            window.showToast(`正在打开「${name}」预览...`);
+        function getTemplateName(id) {
+            const t = currentTemplates.find(item => String(item.id) === String(id));
+            return t?.name || '';
+        }
+
+        function previewTemplate(id) {
+            const name = getTemplateName(id);
+            window.showToast(name ? `正在打开「${name}」预览...` : '正在打开预览...');
             setTimeout(() => {
                 window.open(`preview.html?id=${id}`, '_blank');
             }, 500);
         }
 
         // 编辑模板
-        function editTemplate(id, name) {
-            window.showToast(`正在打开「${name}」编辑器...`);
+        function editScreenTemplate(id) {
+            const name = getTemplateName(id);
+            window.showToast(name ? `正在打开「${name}」编辑器...` : '正在打开编辑器...');
             setTimeout(() => {
                 window.location.href = `editor.html?id=${id}`;
-            }, 500);
+            }, 200);
+        }
+
+        async function editTemplateInfo(id) {
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch template');
+                const t = await response.json();
+
+                document.getElementById('templateId').value = t.id;
+                document.getElementById('newName').value = t.name || '';
+                document.getElementById('newIndustry').value = t.industry || '';
+                document.getElementById('newStatus').value = t.status || 'draft';
+                document.getElementById('newDesc').value = '';
+
+                document.getElementById('createModalTitle').textContent = '编辑模板';
+                document.getElementById('saveTemplateBtn').textContent = '保存';
+
+                openModal('createModal');
+            } catch (error) {
+                console.error('Edit template error:', error);
+                window.showToast('加载模板信息失败', 'danger');
+            }
+        }
+
+        async function viewTemplate(id) {
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch template');
+                const t = await response.json();
+
+                document.getElementById('detailId').value = t.id ?? '';
+                document.getElementById('detailStatus').value = t.status === 'published' ? '已发布' : t.status === 'draft' ? '草稿' : t.status === 'error' ? '异常' : (t.status || '');
+                document.getElementById('detailName').value = t.name || '';
+                document.getElementById('detailIndustry').value = formatIndustry(t.industry || '');
+                document.getElementById('detailTheme').value = t.color_theme || '';
+                document.getElementById('detailViews').value = (t.views ?? 0) + '';
+                document.getElementById('detailCreateTime').value = t.createTime ? new Date(t.createTime).toLocaleString() : '';
+                document.getElementById('detailUpdateTime').value = t.updateTime ? new Date(t.updateTime).toLocaleString() : '';
+                document.getElementById('detailConfig').value = formatMaybeJson(t.config);
+
+                openModal('detailModal');
+            } catch (error) {
+                console.error('View template error:', error);
+                window.showToast('加载模板详情失败', 'danger');
+            }
+        }
+
+        function formatMaybeJson(value) {
+            if (!value) return '';
+            const str = String(value);
+            try {
+                return JSON.stringify(JSON.parse(str), null, 2);
+            } catch {
+                return str;
+            }
         }
 
         // 删除模板 (伪删除 / 软删除)
-        async function deleteTemplate(id, name) {
-            if (confirm(`确定要删除模板「${name}」吗？此操作不可恢复。`)) {
+        async function deleteTemplate(id) {
+            const name = getTemplateName(id);
+            if (confirm(`确定要删除模板「${name || id}」吗？此操作不可恢复。`)) {
                 try {
                     const response = await fetch(`${API_BASE}/${id}`, {
                         method: 'DELETE',
@@ -1031,7 +1196,7 @@
 
                     if (!response.ok) throw new Error('Failed to delete template');
 
-                    window.showToast(`模板「${name}」已删除`);
+                    window.showToast(`模板「${name || id}」已删除`);
                     fetchTemplates(currentPage);
                 } catch (error) {
                     console.error('Delete template error:', error);
